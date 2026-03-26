@@ -1,0 +1,158 @@
+/* Monster stat block styles */
+
+.Monster {
+  position: relative;
+  overflow: hidden;
+}
+
+.Monster__header {
+  display: flex;
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.Monster__name {
+  flex: 1 1 auto;
+}
+
+.Monster__level {
+  flex: 0 0 auto;
+}
+
+.Monster__alternateLink {
+  color: #F79639;
+  cursor: pointer;
+}
+
+.Monster__alternateLink:hover {
+  text-decoration: underline;
+}
+
+.Monster__traits {
+  display: flex;
+}
+
+.Monster__trait {
+  flex: 0 0 auto;
+  border: 1px solid #D9C484;
+  background-color: #5E0000;
+  color: #fff;
+  font-weight: bold;
+  padding: 2px 4px;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+.Monster__trait--alignment {
+  background-color: #576293;
+}
+.Monster__trait--size {
+  background-color: #3B7B59;
+}
+.Monster__trait--rarity {
+  background-color: #98513D;
+}
+.Monster__trait--uncommon {
+  background-color: #98513D;
+}
+.Monster__trait--rare {
+  background-color: #0c1466;
+}
+.Monster__trait--unique {
+  background-color: #800080;
+}
+
+.Monster__abilityScore {
+  padding: 0 4px 0 2px;
+}
+
+.Monster__roll {
+  padding: 0;
+  cursor: pointer;
+  color: #177ddc;
+}
+
+.Monster__roll:hover {
+  background-color: #f5e1cf;
+}
+
+.Monster__ability_success {
+  text-indent: 1em;
+}
+
+.Monster__abilities,
+.Monster__ac,
+.Monster__hitpoints,
+.Monster__saves,
+.Monster__knowledge,
+.Monster__grafts,
+.Monster__traits,
+.Monster__senses,
+.Monster__languages,
+.Monster__skills,
+.Monster__skill,
+.Monster__abilityScores,
+.Monster__items,
+.Monster__defense,
+.Monster__inlineAbility,
+.Monster__speed,
+.Monster__modifier,
+.Monster__modifiers,
+.Monster__offense {
+  margin: 2px 0;
+  line-height: 1.3em;
+}
+
+/* Action icon font */
+.Monster__actionIcon {
+  font-family: 'Pathfinder2eActions';
+  font-size: 18px;
+  margin-top: -2px;
+  margin-bottom: -2px;
+}
+
+/* MonsterCard */
+.MonsterCard {
+  float: right;
+  margin-left: 12px;
+  margin-bottom: 8px;
+  padding: 8px;
+  background-color: #444;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.MonsterCard__portrait {
+  border: 1px solid #3C3C3C;
+  background-color: #ccc;
+}
+
+.MonsterCard__portrait--party {
+  width: 100px;
+  height: auto;
+}
+
+.MonsterCard__portrait--roll {
+  width: 40px;
+  height: 40px;
+}
+
+.MonsterCard__name {
+  font-size: 14px;
+  text-align: center;
+  padding-top: 8px;
+}
+
+/* MythicAbility */
+.MythicAbility__activation {
+  margin-left: 1em;
+}
+
+/* Markdown */
+.Markdown em {
+  font-style: italic;
+}
+
+.Markdown ul {
+  list-style-type: disc;
+  list-style-position: inside;
+}
