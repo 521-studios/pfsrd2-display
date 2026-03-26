@@ -2,6 +2,7 @@ import React from 'react'
 import SpecialSense from './SpecialSense'
 import Modifiers from './Modifiers'
 import RollableText from '../../shared/RollableText'
+import Changed from '../../shared/Changed'
 import { useDisplay } from '../../context/DisplayContext'
 import { comma, decoratedNumber } from '../../shared/utils'
 
@@ -16,9 +17,11 @@ const Senses = (props) => {
   return (
     <div className='Monster__senses'>
       <strong>Perception</strong>{' '}
-      <RollableText type="d20" label={`${monsterName} Initiative`} formula={`1d20${decoratedNumber(perception.value)}`}>
-        {decoratedNumber(perception.value)}
-      </RollableText>
+      <Changed path="/stat_block/senses/perception/value">
+        <RollableText type="d20" label={`${monsterName} Initiative`} formula={`1d20${decoratedNumber(perception.value)}`}>
+          {decoratedNumber(perception.value)}
+        </RollableText>
+      </Changed>
       <Modifiers modifiers={perception.modifiers} />{comma(-1, special_senses, "; ")}
       {special_senses ? special_senses.map((ss, i) => {
         return (

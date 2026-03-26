@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { createRoot } from 'react-dom/client'
 import { CreatureStatBlock } from '../src/index.js'
 import '../styles/index.css'
@@ -21,6 +21,29 @@ class ErrorBoundary extends React.Component {
   }
 }
 
+// --- Multipart response parser ---
+async function parseMultipartResponse(response) {
+  const text = await response.text()
+  const boundary = text.split('\n')[0].trim()
+  const parts = text.split(boundary)
+  let patches = null
+  let creature = null
+
+  for (const part of parts) {
+    if (part.includes('name="patches"')) {
+      const jsonStart = part.indexOf('{')
+      const jsonEnd = part.lastIndexOf('}') + 1
+      patches = JSON.parse(part.substring(jsonStart, jsonEnd))
+    } else if (part.includes('name="creature"')) {
+      const jsonStart = part.indexOf('{')
+      const jsonEnd = part.lastIndexOf('}') + 1
+      creature = JSON.parse(part.substring(jsonStart, jsonEnd))
+    }
+  }
+  return { patches, creature }
+}
+
+// --- Search Panel ---
 function SearchPanel({ onSelect }) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
@@ -36,11 +59,7 @@ function SearchPanel({ onSelect }) {
     timerRef.current = setTimeout(async () => {
       setLoading(true)
       try {
-        const params = new URLSearchParams({
-          q: query,
-          type: 'monsters',
-          limit: '15',
-        })
+        const params = new URLSearchParams({ q: query, type: 'monsters', limit: '15' })
         const res = await fetch(`${API}/search/suggest/unified?${params}`)
         const data = await res.json()
         setResults(data || [])
@@ -94,10 +113,7 @@ function SearchResult({ result, onSelect }) {
       {result.alternate && (
         <div
           style={styles.alternate}
-          onClick={(e) => {
-            e.stopPropagation()
-            onSelect(result.alternate)
-          }}
+          onClick={(e) => { e.stopPropagation(); onSelect(result.alternate) }}
         >
           ↔ {result.alternate.name} ({result.alternate.edition})
         </div>
@@ -106,6 +122,7 @@ function SearchResult({ result, onSelect }) {
   )
 }
 
+// --- Version Picker ---
 function VersionPicker({ versions, current, onChange }) {
   if (!versions || versions.length <= 1) return null
   return (
@@ -126,26 +143,114 @@ function VersionPicker({ versions, current, onChange }) {
   )
 }
 
+// --- Template Bar ---
+function TemplateBar({ edition, templateStack, onApply, onRemoveLast, onClearAll }) {
+  const [allTemplates, setAllTemplates] = useState([])
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(`${API}/search?type=monster_templates&limit=55`)
+        const data = await res.json()
+        setAllTemplates((data.results || []).sort((a, b) => a.name.localeCompare(b.name)))
+      } catch (e) {
+        console.error('Failed to load templates:', e)
+      }
+    })()
+  }, [])
+
+  // Filter templates: if both editions exist for the same name, show only the one
+  // matching the creature's edition. The API auto-resolves edition mismatches anyway.
+  const templates = useMemo(() => {
+    const byName = {}
+    for (const t of allTemplates) {
+      if (!byName[t.name]) byName[t.name] = []
+      byName[t.name].push(t)
+    }
+    return allTemplates.filter((t) => {
+      const variants = byName[t.name]
+      if (variants.length === 1) return true
+      // Multiple editions exist — only show the one matching the creature
+      return t.edition === edition
+    })
+  }, [allTemplates, edition])
+
+  const handleApply = async (template) => {
+    setLoading(true)
+    try {
+      await onApply(template)
+    } catch (e) {
+      console.error('Template apply failed:', e)
+    }
+    setLoading(false)
+  }
+
+  return (
+    <div style={styles.templateBar}>
+      <div style={styles.templateRow}>
+        <strong style={{ marginRight: 8 }}>Templates:</strong>
+        <select
+          style={styles.templateSelect}
+          onChange={(e) => {
+            const t = templates.find((t) => t.game_id === e.target.value)
+            if (t) handleApply(t)
+            e.target.value = ''
+          }}
+          disabled={loading}
+          defaultValue=""
+        >
+          <option value="" disabled>
+            {loading ? 'Applying...' : '+ Add template'}
+          </option>
+          {templates.map((t) => (
+            <option key={t.game_id} value={t.game_id}>
+              {t.name}
+            </option>
+          ))}
+        </select>
+      </div>
+      {templateStack.length > 0 && (
+        <div style={styles.templateStack}>
+          {templateStack.map((entry, i) => (
+            <span key={i} style={styles.templateTag}>
+              {entry.template.name}
+              {i === templateStack.length - 1 && (
+                <span style={styles.templateRemove} onClick={onRemoveLast}> ×</span>
+              )}
+            </span>
+          ))}
+          {templateStack.length > 1 && (
+            <span style={styles.templateClearAll} onClick={onClearAll}>Clear all</span>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// --- Detail Panel ---
 function DetailPanel({ selected, onLoadMonster }) {
-  const [creature, setCreature] = useState(null)
+  const [originalCreature, setOriginalCreature] = useState(null)
   const [versions, setVersions] = useState([])
   const [schemaVersion, setSchemaVersion] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [rolls, setRolls] = useState([])
+  const [templateStack, setTemplateStack] = useState([])
 
   // Fetch entry metadata (versions) when selection changes
   useEffect(() => {
     if (!selected) return
     setVersions([])
     setSchemaVersion(null)
+    setTemplateStack([])
     ;(async () => {
       try {
         const res = await fetch(`${API}/entries/${selected.game_id}`)
         const data = await res.json()
         if (data.versions) {
           setVersions(data.versions)
-          // If we already had a version selected, try to keep it
           const prev = schemaVersion
           const match = prev && data.versions.find((v) => v.schema_version === prev)
           setSchemaVersion(match ? prev : data.entry.current_schema_version)
@@ -161,27 +266,74 @@ function DetailPanel({ selected, onLoadMonster }) {
     if (!selected || !schemaVersion) return
     setLoading(true)
     setError(null)
+    setTemplateStack([])
     ;(async () => {
       try {
         const params = new URLSearchParams({ version: schemaVersion })
-        const res = await fetch(
-          `${API}/entries/${selected.game_id}/full?${params}`
-        )
+        const res = await fetch(`${API}/entries/${selected.game_id}/full?${params}`)
         if (!res.ok) throw new Error(`${res.status} ${res.statusText}`)
         const data = await res.json()
-        setCreature(data)
+        setOriginalCreature(data)
       } catch (e) {
         console.error('Failed to fetch creature:', e)
         setError(e.message)
-        setCreature(null)
+        setOriginalCreature(null)
       }
       setLoading(false)
     })()
   }, [selected, schemaVersion])
 
+  const handleApplyTemplate = useCallback(async (template) => {
+    // Use the current creature (last in stack, or original)
+    const currentCreature = templateStack.length > 0
+      ? templateStack[templateStack.length - 1].creature
+      : originalCreature
+
+    const res = await fetch(`${API}/templates/apply`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        creature: currentCreature,
+        template_game_id: template.game_id,
+      }),
+    })
+    if (!res.ok) throw new Error(`Template apply failed: ${res.status}`)
+
+    const { patches, creature } = await parseMultipartResponse(res)
+    setTemplateStack((prev) => [
+      ...prev,
+      { template: { game_id: template.game_id, name: template.name }, patches, creature },
+    ])
+  }, [originalCreature, templateStack])
+
+  const handleRemoveLast = useCallback(() => {
+    setTemplateStack((prev) => prev.slice(0, -1))
+  }, [])
+
+  const handleClearAll = useCallback(() => {
+    setTemplateStack([])
+  }, [])
+
   const handleRoll = useCallback((rollData) => {
     setRolls((prev) => [{ ...rollData, ts: Date.now() }, ...prev].slice(0, 20))
   }, [])
+
+  // Compute the displayed creature and merged patches
+  const displayedCreature = templateStack.length > 0
+    ? templateStack[templateStack.length - 1].creature
+    : originalCreature
+
+  // Merge all patch operations from the stack into one flat array
+  const mergedPatches = useMemo(() => {
+    if (templateStack.length === 0) return null
+    const allGroups = []
+    for (const entry of templateStack) {
+      if (entry.patches && entry.patches.applied_patches) {
+        allGroups.push(...entry.patches.applied_patches)
+      }
+    }
+    return allGroups.length > 0 ? allGroups : null
+  }, [templateStack])
 
   if (!selected) {
     return (
@@ -196,17 +348,27 @@ function DetailPanel({ selected, onLoadMonster }) {
       <VersionPicker versions={versions} current={schemaVersion} onChange={setSchemaVersion} />
       {loading && <div style={styles.status}>Loading...</div>}
       {error && <div style={{ ...styles.status, color: '#f55' }}>Error: {error}</div>}
-      {creature && (
-        <div style={styles.statBlock}>
-          <ErrorBoundary>
-            <CreatureStatBlock
-              data={creature}
-              onRoll={handleRoll}
-              onLoadMonster={onLoadMonster}
-              imageBaseUrl={`${API}/images`}
-            />
-          </ErrorBoundary>
-        </div>
+      {displayedCreature && (
+        <>
+          <TemplateBar
+            edition={displayedCreature.edition}
+            templateStack={templateStack}
+            onApply={handleApplyTemplate}
+            onRemoveLast={handleRemoveLast}
+            onClearAll={handleClearAll}
+          />
+          <div style={styles.statBlock}>
+            <ErrorBoundary>
+              <CreatureStatBlock
+                data={displayedCreature}
+                patches={mergedPatches}
+                onRoll={handleRoll}
+                onLoadMonster={onLoadMonster}
+                imageBaseUrl={`${API}/images`}
+              />
+            </ErrorBoundary>
+          </div>
+        </>
       )}
       {rolls.length > 0 && (
         <div style={styles.rollLog}>
@@ -231,10 +393,10 @@ function DetailPanel({ selected, onLoadMonster }) {
   )
 }
 
+// --- App ---
 function App() {
   const [selected, setSelected] = useState(null)
 
-  // Load a monster by game_id (used by onLoadMonster callback from stat block)
   const loadMonster = useCallback((gameId) => {
     setSelected({ game_id: gameId, name: gameId })
   }, [])
@@ -247,6 +409,7 @@ function App() {
   )
 }
 
+// --- Styles ---
 const styles = {
   searchPanel: {
     width: 320,
@@ -333,6 +496,53 @@ const styles = {
     background: '#177ddc',
     color: '#fff',
     borderColor: '#177ddc',
+  },
+  templateBar: {
+    marginBottom: 12,
+    padding: '8px 12px',
+    background: '#2a2a2a',
+    borderRadius: 6,
+  },
+  templateRow: {
+    display: 'flex',
+    alignItems: 'center',
+  },
+  templateSelect: {
+    padding: '4px 8px',
+    border: '1px solid #555',
+    borderRadius: 4,
+    background: '#1a1a1a',
+    color: '#e0e0e0',
+    fontSize: 12,
+    cursor: 'pointer',
+  },
+  templateStack: {
+    marginTop: 6,
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: 4,
+    alignItems: 'center',
+  },
+  templateTag: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    padding: '2px 8px',
+    background: '#F79639',
+    color: '#1a1a1a',
+    borderRadius: 3,
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  templateRemove: {
+    marginLeft: 4,
+    cursor: 'pointer',
+    fontWeight: 'normal',
+  },
+  templateClearAll: {
+    fontSize: 11,
+    color: '#888',
+    cursor: 'pointer',
+    marginLeft: 4,
   },
   rollLog: {
     background: '#1a1a1a',

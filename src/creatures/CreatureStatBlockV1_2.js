@@ -1,4 +1,5 @@
 import React from 'react'
+import Changed from '../shared/Changed'
 import Traits from './components/Traits'
 import Grafts from './components/Grafts'
 import Knowledges from './components/Knowledges'
@@ -26,12 +27,12 @@ const CreatureStatBlockV1_2 = ({ data }) => {
       <div className='Monster__header'>
         <div className='Monster__name'>{data.name}</div>
         <div className='Monster__level'>
-          {capitalize(data.type)} {creature_type.level}
+          {capitalize(data.type)} <Changed path="/stat_block/creature_type/level">{creature_type.level}</Changed>
         </div>
       </div>
 
       <hr />
-      <Traits traits={creature_type.traits} />
+      <Traits traits={creature_type.traits} creatureTypes={creature_type.creature_types} />
       <Grafts grafts={creature_type.grafts} />
       <Knowledges knowledges={creature_type.knowledge} />
       <hr />

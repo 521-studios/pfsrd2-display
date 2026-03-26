@@ -1,25 +1,39 @@
 import React from 'react'
+import Changed from '../../shared/Changed'
 
 const Traits = (props) => {
-  const { traits } = props
+  const { traits, creatureTypes } = props
 
-  if (!traits) { return null }
+  if (!traits && !creatureTypes) { return null }
 
   let renderTraits = traitlist(traits)
 
+  // creature_types are strings like "Animal", "Ghost", "Spirit", "Undead"
+  // Render them as general trait badges after the regular traits
+  // The original traits from the data also contain the base creature type,
+  // so only add creature_types that aren't already in the traits list
+  const traitNames = new Set(renderTraits.map(t => t.name))
+  const extraTypes = (creatureTypes || [])
+    .filter(ct => !traitNames.has(ct))
+    .map(ct => ({ name: ct, class: 'general' }))
+
   return (
     <div className='Monster__traits'>
-      {renderTraits.map((trait, i) => {
-        let name = trait.name
-        return (
-          <div
-            key={i}
-            className={`Monster__trait Monster__trait--${trait.class}`}
-          >
-            {name}
+      {renderTraits.map((trait, i) => (
+        <div
+          key={i}
+          className={`Monster__trait Monster__trait--${trait.class}`}
+        >
+          {trait.name}
+        </div>
+      ))}
+      {extraTypes.map((ct, i) => (
+        <Changed key={`ct-${i}`} path="/stat_block/creature_type/creature_types">
+          <div className={`Monster__trait Monster__trait--${ct.class}`}>
+            {ct.name}
           </div>
-        )
-      })}
+        </Changed>
+      ))}
     </div>
   )
 }

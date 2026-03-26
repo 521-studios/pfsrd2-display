@@ -12,7 +12,7 @@ const Skills = (props) => {
       <strong>Skills </strong>
       {skills.map((s, i) => {
         return (
-          <Skill skill={s} i={i} key={i}>{comma(i, skills)}</Skill>
+          <Skill skill={s} i={i} changePath={`/stat_block/statistics/skills/${i}/value`} key={i}>{comma(i, skills)}</Skill>
         )
       })}
     </div>
