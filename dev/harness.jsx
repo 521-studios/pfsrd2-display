@@ -151,7 +151,7 @@ function TemplateBar({ edition, templateStack, onApply, onRemoveLast, onClearAll
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch(`${API}/search?type=monster_templates&limit=55`)
+        const res = await fetch(`${API}/search?type=monster_templates&limit=500`)
         const data = await res.json()
         setAllTemplates((data.results || []).sort((a, b) => a.name.localeCompare(b.name)))
       } catch (e) {
