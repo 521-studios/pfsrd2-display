@@ -151,9 +151,18 @@ function TemplateBar({ edition, templateStack, onApply, onRemoveLast, onClearAll
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch(`${API}/search?type=monster_templates&limit=500`)
-        const data = await res.json()
-        setAllTemplates((data.results || []).sort((a, b) => a.name.localeCompare(b.name)))
+        const pageSize = 20
+        let offset = 0
+        let all = []
+        while (true) {
+          const res = await fetch(`${API}/search?type=monster_templates&limit=${pageSize}&offset=${offset}`)
+          const data = await res.json()
+          const results = data.results || []
+          all = all.concat(results)
+          if (results.length < pageSize || all.length >= data.total) break
+          offset += pageSize
+        }
+        setAllTemplates(all.sort((a, b) => a.name.localeCompare(b.name)))
       } catch (e) {
         console.error('Failed to load templates:', e)
       }
