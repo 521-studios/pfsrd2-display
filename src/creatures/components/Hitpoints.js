@@ -1,10 +1,11 @@
 import React from 'react'
 import InlineAbility from './InlineAbility'
+import Changed from '../../shared/Changed'
 import { comma } from '../../shared/utils'
 import Protections from './Protections'
 
 const Hitpoints = (props) => {
-  const { hp } = props
+  const { hp, hpIndex = 0 } = props
 
   if (!hp) { return null }
 
@@ -59,7 +60,7 @@ const Hitpoints = (props) => {
     <div className='Monster__hitpoints'>
       <strong>HP</strong>
       {' '}
-      {hp.hp}
+      <Changed path={`/stat_block/defense/hitpoints/${hpIndex}/hp`}>{hp.hp}</Changed>
       {opening(hp)}
       {hpName(hp)}
       {abilities ? <span>
@@ -72,9 +73,12 @@ const Hitpoints = (props) => {
       {closing(hp)}
       {renderThresholds(hp)}
       {renderHardness(hp)}
-      <Protections protections={hp.immunities} protectionType='Immunities' />
-      <Protections protections={hp.resistances} protectionType='Resistances' />
-      <Protections protections={hp.weaknesses} protectionType='Weaknesses' />
+      <Protections protections={hp.immunities} protectionType='Immunities'
+        changePath={`/stat_block/defense/hitpoints/${hpIndex}/immunities`} />
+      <Protections protections={hp.resistances} protectionType='Resistances'
+        changePath={`/stat_block/defense/hitpoints/${hpIndex}/resistances`} />
+      <Protections protections={hp.weaknesses} protectionType='Weaknesses'
+        changePath={`/stat_block/defense/hitpoints/${hpIndex}/weaknesses`} />
     </div>
   )
 }

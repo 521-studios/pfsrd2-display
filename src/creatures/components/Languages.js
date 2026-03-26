@@ -2,6 +2,7 @@ import React from 'react'
 import Language from './Language'
 import Modifiers from './Modifiers'
 import InlineAbility from './InlineAbility'
+import Changed from '../../shared/Changed'
 import { comma } from '../../shared/utils'
 
 const Languages = (props) => {
@@ -16,7 +17,9 @@ const Languages = (props) => {
     <div className='Monster__languages'>
       <strong>Languages </strong>
       {langs ? langs.map((l, i) =>
-        <Language language={l} i={i} key={i}>{comma(i, langs)}</Language>
+        <Changed path={`/stat_block/statistics/languages/languages/${i}`} key={i}>
+          <Language language={l} i={i}>{comma(i, langs)}</Language>
+        </Changed>
       ) : null}{comma(-1, abilities, "; ")}
       {abilities ? abilities.map((c, i) => {
         return (

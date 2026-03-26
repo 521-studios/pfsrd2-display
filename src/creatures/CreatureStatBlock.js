@@ -1,5 +1,6 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import { DisplayProvider } from '../context/DisplayContext'
+import { buildChangedPaths } from '../shared/patches'
 import CreatureStatBlockV1_2 from './CreatureStatBlockV1_2'
 import CreatureStatBlockV1_3 from './CreatureStatBlockV1_3'
 
@@ -11,14 +12,17 @@ const getSchemaVersion = (data) => {
   return '1.2'
 }
 
-const CreatureStatBlock = ({ data, onRoll, onLoadMonster, imageBaseUrl }) => {
+const CreatureStatBlock = ({ data, patches, onRoll, onLoadMonster, imageBaseUrl }) => {
   if (!data) { return null }
+
+  const changedPaths = useMemo(() => buildChangedPaths(patches, data), [patches, data])
 
   const contextValue = {
     onRoll: onRoll || null,
     onLoadMonster: onLoadMonster || null,
     imageBaseUrl: imageBaseUrl || '',
     monsterName: data.name || '',
+    changedPaths,
   }
 
   const version = getSchemaVersion(data)
@@ -37,4 +41,5 @@ const CreatureStatBlock = ({ data, onRoll, onLoadMonster, imageBaseUrl }) => {
   )
 }
 
+export { buildChangedPaths }
 export default CreatureStatBlock

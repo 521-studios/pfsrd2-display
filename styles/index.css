@@ -75,6 +75,31 @@
   background-color: #f5e1cf;
 }
 
+/* Template change highlighting — inline values */
+.Monster__changed {
+  background-color: rgba(247, 150, 57, 0.2);
+  border-bottom: 1px solid #F79639;
+  padding: 0 2px;
+  border-radius: 2px;
+}
+
+/* Block-level changed sections (abilities, protections) — left border indicator */
+.Monster__changed--block {
+  background-color: transparent;
+  border-bottom: none;
+  border-left: 3px solid #F79639;
+  padding: 0 0 0 8px;
+  border-radius: 0;
+  margin: 2px 0;
+}
+
+/* Traits have strong background colors — swap to orange background */
+.Monster__changed > .Monster__trait {
+  background-color: #F79639 !important;
+  color: #1a1a1a;
+  border-color: #F79639;
+}
+
 .Monster__ability_success {
   text-indent: 1em;
 }

@@ -1,6 +1,7 @@
 import React from 'react'
 import Action from './Action'
 import RollableText from '../../shared/RollableText'
+import Changed from '../../shared/Changed'
 import { useDisplay } from '../../context/DisplayContext'
 import { decoratedNumber } from '../../shared/utils'
 
@@ -77,6 +78,7 @@ const Attack = (props) => {
         <React.Fragment>
           <strong> <RollableText type="complex" label={label} structuredFormula={sf}>Damage</RollableText></strong>&nbsp;
           {attack.damage.map((d, j) => {
+            const dmgBasePath = `/stat_block/offense/offensive_actions/${i}/attack/damage/${j}`
             return (
               <span key={j}>
                 {j === 0 ? null : <React.Fragment>, </React.Fragment>}
@@ -84,8 +86,8 @@ const Attack = (props) => {
                 {d.effect ? <React.Fragment>{' '}{d.effect}</React.Fragment> : null}
                 {d.persistent ? <React.Fragment>{' '}persistent</React.Fragment> : null}
                 {d.splash ? <React.Fragment>{' '}splash</React.Fragment> : null}
-                {d.damage_type ? <React.Fragment>{' '}{d.damage_type}</React.Fragment> : null}
-                {d.notes ? <React.Fragment>{' '}{d.notes}</React.Fragment> : null}
+                {d.damage_type ? <Changed path={`${dmgBasePath}/damage_type`}><React.Fragment>{' '}{d.damage_type}</React.Fragment></Changed> : null}
+                {d.notes ? <Changed path={`${dmgBasePath}/notes`}><React.Fragment>{' '}{d.notes}</React.Fragment></Changed> : null}
               </span>
             )
           })}
@@ -95,10 +97,12 @@ const Attack = (props) => {
     return ""
   }
 
+  const bonusBasePath = `/stat_block/offense/offensive_actions/${i}/attack/bonus/bonuses`
+
   const getBonuses = () => {
     if (attack.bonus) {
       return (
-        <React.Fragment>
+        <Changed path={bonusBasePath}>
           <RollableText type="d20" label={`${attack.name} ${attack.weapon} (1st attack)`} formula={`1d20${decoratedNumber(attack.bonus.bonuses[0])}`}>
             {decoratedNumber(attack.bonus.bonuses[0])}
           </RollableText>
@@ -108,7 +112,7 @@ const Attack = (props) => {
           </RollableText>/<RollableText type="d20" label={`${attack.name} ${attack.weapon} (3rd attack)`} formula={`1d20${decoratedNumber(attack.bonus.bonuses[2])}`}>
             {decoratedNumber(attack.bonus.bonuses[2])}
           </RollableText>]
-        </React.Fragment>
+        </Changed>
       )
     }
     return ""
