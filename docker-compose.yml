@@ -1,0 +1,30 @@
+services:
+  harness:
+    image: node:24-slim
+    working_dir: /app
+    user: "${UID:-1000}:${GID:-1000}"
+    volumes:
+      - .:/app
+    ports:
+      - "5173:5173"
+    command: npm run dev -- --host 0.0.0.0
+    depends_on:
+      - pfsrd2-api
+
+  pfsrd2-api:
+    build:
+      context: ../pfsrd2-data-api/service
+      dockerfile: Dockerfile.dev
+    user: "${UID:-1000}:${GID:-1000}"
+    volumes:
+      - ../pfsrd2-data-api/service:/app
+      - ${REAL_HOME:-${HOME}}/.aws:/.aws
+    environment:
+      - HOME=/
+      - GOPATH=/tmp/go
+      - GOCACHE=/tmp/go-cache
+      - BUCKET_NAME=521studios-staging-pfsrd2-data
+      - AWS_PROFILE=521-Staging-Admin
+      - WATCHER_INTERVAL=1h
+    ports:
+      - "8090:8090"
