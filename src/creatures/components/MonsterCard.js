@@ -2,8 +2,8 @@ import React from 'react'
 import { useDisplay } from '../../context/DisplayContext'
 
 const MonsterCard = props => {
-  const { image, name } = props
-  const { imageBaseUrl } = useDisplay()
+  const { image } = props
+  const { imageBaseUrl, monsterName } = useDisplay()
 
   if (!image) {
     return null
@@ -19,7 +19,7 @@ const MonsterCard = props => {
           className='MonsterCard__portrait MonsterCard__portrait--party'
         />
       </a>
-      <div className='MonsterCard__name'>{name}</div>
+      <div className='MonsterCard__name'>{monsterName}</div>
     </div>
   )
 }

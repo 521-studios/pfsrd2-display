@@ -13,15 +13,15 @@ const Offense = (props) => {
     <div className='Monster__offense'>
       <Speed speed={offense.speed} />
       {(offense.offensive_actions || []).map((oa, i) => {
-        if (oa.offensive_action_type == 'attack') {
+        if (oa.offensive_action_type === 'attack') {
           return (<Attack attack={oa.attack} i={i} key={i} />)
-        } else if (oa.offensive_action_type == 'spells') {
+        } else if (oa.offensive_action_type === 'spells') {
           return (<Spells spells={oa.spells} i={i} key={i} />)
-        } else if (oa.offensive_action_type == 'affliction') {
+        } else if (oa.offensive_action_type === 'affliction') {
           return (<Affliction affliction={oa.affliction} i={i} key={i} />)
-        } else if (oa.offensive_action_type == 'ability') {
+        } else if (oa.offensive_action_type === 'ability') {
           return (<Ability ability={oa.ability} i={i} key={i} />)
-        } else if (oa.offensive_action_type == 'mythic_ability') {
+        } else if (oa.offensive_action_type === 'mythic_ability') {
           return (<MythicAbility mythicAbility={oa.mythic_ability} i={i} key={i} />)
         }
       })}

@@ -10,7 +10,8 @@
   "scripts": {
     "build": "rollup -c",
     "dev": "vite dev --config dev/vite.config.mjs",
-    "watch": "rollup -c -w"
+    "watch": "rollup -c -w",
+    "test": "node --test src/**/*.test.js"
   },
   "peerDependencies": {
     "react": ">=18",

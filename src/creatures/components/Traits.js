@@ -55,7 +55,7 @@ const traitlist = traits => {
   })
 
   let alignmentAbbrev = alignmentTraits.map(t => t.name.split(' ').map(n => n.charAt(0)).join('')).join('')
-  alignmentAbbrev = alignmentAbbrev == "A" ? "Any" : alignmentAbbrev
+  alignmentAbbrev = alignmentAbbrev === "A" ? "Any" : alignmentAbbrev
   let renderTraits = []
   rarityTraits.forEach(t => { renderTraits.push(t) })
   if (alignmentAbbrev) {

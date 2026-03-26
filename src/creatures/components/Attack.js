@@ -79,7 +79,7 @@ const Attack = (props) => {
           {attack.damage.map((d, j) => {
             return (
               <span key={j}>
-                {j == 0 ? null : <React.Fragment>, </React.Fragment>}
+                {j === 0 ? null : <React.Fragment>, </React.Fragment>}
                 {d.formula ? <RollableText type="formula" label={d.label} formula={d.formula}>{d.formula}</RollableText> : null}
                 {d.effect ? <React.Fragment>{' '}{d.effect}</React.Fragment> : null}
                 {d.persistent ? <React.Fragment>{' '}persistent</React.Fragment> : null}

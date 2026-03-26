@@ -16,7 +16,7 @@ const Spells = (props) => {
       items.push(` DC ${spells.saving_throw.dc}`)
     }
     if (spells.focus_points) {
-      if (spells.focus_points == 1) {
+      if (spells.focus_points === 1) {
         items.push(` ${spells.focus_points} Focus Point`)
       } else {
         items.push(` ${spells.focus_points} Focus Points`)
@@ -30,7 +30,7 @@ const Spells = (props) => {
     if (spells.spell_attack > 0) {
       spell_attack = spells.spell_attack
     }
-    if (items.length == 0 && !spell_attack) {
+    if (items.length === 0 && !spell_attack) {
       return null
     }
     return (

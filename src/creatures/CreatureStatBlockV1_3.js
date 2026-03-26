@@ -23,7 +23,6 @@ const CreatureStatBlockV1_3 = ({ data }) => {
   return (
     <div className='Monster'>
       <MonsterCard
-        name={data.name}
         image={stat_block.image ? stat_block.image.image : null}
       />
       <div className='Monster__header'>

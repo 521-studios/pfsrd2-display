@@ -57,7 +57,7 @@ function pathfinder_actions(state, silent) {
     }
     if (['#', '@', '-'].indexOf(state.src.charAt(endPos)) > -1) {
       tag_data = tag_data + state.src.charAt(endPos)
-    } else if (state.src.charAt(endPos) == ']') {
+    } else if (state.src.charAt(endPos) === ']') {
       tag_data = tag_data + state.src.charAt(endPos)
       tag = actions[tag_data]
     } else {
