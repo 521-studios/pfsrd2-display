@@ -78,11 +78,26 @@ When `patches` is provided (merged `applied_patches` from the template API), mod
 - **Traits** (creature types added by template): orange badge background
 - **Per-item precision**: only newly added items highlight, not existing ones
 
+## Key Design Decisions
+
+- **JSX in .js files** — components use `.js` extension (ported from lets-roll). Vite dev config has a custom `jsxInJs` plugin to handle this. Rollup uses `@rollup/plugin-babel`.
+- **No dice dependency** — `RollableText` + `onRoll` callback replaces lets-roll's `dice.js` + `rollService`. The library never rolls dice — it fires callbacks.
+- **Context over props** — `DisplayContext` provides `monsterName`, `onRoll`, `imageBaseUrl`, `changedPaths`. Components use `useDisplay()` / `useIsChanged()`. No prop threading for shared data.
+- **Schema version as float** — API returns `schema_version` as a number (1.4), not a string. `CreatureStatBlock` coerces to string internally.
+- **Patch paths use JSON Pointer** (RFC 6901) — `/stat_block/defense/ac/value`. Append operations use `/-` suffix.
+- **Edition auto-resolution** — the template API automatically resolves edition mismatches (requesting remastered Elite for a legacy creature uses legacy Elite).
+
+## Ported Components
+
+The 34 components in `src/creatures/components/` were extracted from `lets-roll/app/javascript/components/components/Monsters/PF2/`. Known issues tracked in beads:
+- `Ability.js` / `Affliction.js`: mutable render variables (bd_521Studios-2ne)
+- `Attack.js`: mutates props via `setLabel` (bd_521Studios-efi)
+- `Offense.js`: if/else chain could be component map (bd_521Studios-llu)
+
 ## Testing
 
-Uses Node's built-in test runner. No Jest, no Vitest.
+Node's built-in test runner. No Jest, no Vitest, no assertion libs beyond `node:assert`.
 
 ```bash
-npm test                          # run all tests
-node --test src/shared/utils.test.js  # run one file
+npm test
 ```
