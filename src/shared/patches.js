@@ -2,9 +2,12 @@
  * Build a Set of changed JSON Pointer paths from an array of patch groups.
  * Each group has { change_category, description, operations: [{ op, path, value }] }
  *
- * For array appends (path ending in /-), we store both the raw path and a
- * synthetic indexed path based on the final creature data, so individual
- * array items can be highlighted.
+ * For array appends (path ending in /-), we compute specific indexed paths
+ * for the newly added items based on the final creature data. This ensures
+ * only new items highlight, not existing ones.
+ *
+ * For whole-array set operations (no /-), we store the array path itself,
+ * which causes all children to highlight (since the entire array is new).
  */
 export function buildChangedPaths(patchGroups, creature) {
   if (!patchGroups || !Array.isArray(patchGroups)) return null
@@ -19,10 +22,9 @@ export function buildChangedPaths(patchGroups, creature) {
       if (!op.path) continue
 
       if (op.path.endsWith('/-')) {
-        // Array append — store the array path (without /-) as changed
+        // Array append — DON'T store the bare array path (that would highlight
+        // all existing items). Instead, count appends and compute indexed paths below.
         const arrayPath = op.path.slice(0, -2)
-        paths.add(arrayPath)
-        // Count appends to this array
         appendCounts[arrayPath] = (appendCounts[arrayPath] || 0) + 1
       } else {
         paths.add(op.path)
@@ -63,12 +65,17 @@ function resolvePath(obj, pointer) {
 
 /**
  * Check if a path was changed.
+ * - Exact match
+ * - Child of path is changed (e.g. /ac/value changed → /ac is changed)
+ * - Path is child of a changed path (e.g. /immunities set → /immunities/3 is changed)
+ *   This only applies for whole-array set operations, not appends — appends use indexed paths.
  */
 export function isPathChanged(changedPaths, path) {
   if (!changedPaths || !path) return false
   if (changedPaths.has(path)) return true
   for (const cp of changedPaths) {
     if (cp.startsWith(path + '/')) return true
+    if (path.startsWith(cp + '/')) return true
   }
   return false
 }

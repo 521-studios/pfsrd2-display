@@ -48,7 +48,7 @@ describe('buildChangedPaths', () => {
     assert.ok(result.has('/stat_block/defense/hitpoints/0/hp'))
   })
 
-  it('stores array path for append operations', () => {
+  it('does not store bare array path for append operations', () => {
     const patches = [
       {
         change_category: 'damage',
@@ -57,8 +57,9 @@ describe('buildChangedPaths', () => {
         ],
       },
     ]
+    // Without creature data, no indexed paths can be computed, returns null
     const result = buildChangedPaths(patches)
-    assert.ok(result.has('/items'))
+    assert.strictEqual(result, null)
   })
 
   it('computes indexed paths for appended array items using creature data', () => {
@@ -73,7 +74,7 @@ describe('buildChangedPaths', () => {
     // Creature has 2 languages — the append added the second one (index 1)
     const creature = { langs: ['Jotun', 'Necril'] }
     const result = buildChangedPaths(patches, creature)
-    assert.ok(result.has('/langs'))      // array itself
+    assert.ok(!result.has('/langs'))     // bare array path NOT stored for appends
     assert.ok(result.has('/langs/1'))    // newly appended item
     assert.ok(!result.has('/langs/0'))   // original item NOT highlighted
   })
@@ -125,5 +126,17 @@ describe('isPathChanged', () => {
   it('does not match sibling', () => {
     const paths = new Set(['/foo/bar'])
     assert.strictEqual(isPathChanged(paths, '/foo/baz'), false)
+  })
+
+  it('matches child of changed parent (whole-array set)', () => {
+    // If /immunities was set as a whole, /immunities/3 is also changed
+    const paths = new Set(['/stat_block/defense/hitpoints/0/immunities'])
+    assert.strictEqual(isPathChanged(paths, '/stat_block/defense/hitpoints/0/immunities/3'), true)
+    assert.strictEqual(isPathChanged(paths, '/stat_block/defense/hitpoints/0/immunities/0'), true)
+  })
+
+  it('does not match unrelated paths for whole-array set', () => {
+    const paths = new Set(['/stat_block/defense/hitpoints/0/immunities'])
+    assert.strictEqual(isPathChanged(paths, '/stat_block/defense/hitpoints/0/weaknesses/0'), false)
   })
 })
