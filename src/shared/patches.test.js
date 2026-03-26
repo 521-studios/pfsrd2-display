@@ -139,4 +139,20 @@ describe('isPathChanged', () => {
     const paths = new Set(['/stat_block/defense/hitpoints/0/immunities'])
     assert.strictEqual(isPathChanged(paths, '/stat_block/defense/hitpoints/0/weaknesses/0'), false)
   })
+
+  it('returns false for null path', () => {
+    const paths = new Set(['/foo'])
+    assert.strictEqual(isPathChanged(paths, null), false)
+    assert.strictEqual(isPathChanged(paths, ''), false)
+  })
+
+  it('returns null for append ops with unresolvable creature path', () => {
+    const patches = [
+      { change_category: 'x', operations: [{ op: 'add', path: '/missing/array/-' }] },
+    ]
+    const creature = { other: 'stuff' }
+    const result = buildChangedPaths(patches, creature)
+    // Path doesn't resolve to an array — no indexed paths added, returns null
+    assert.strictEqual(result, null)
+  })
 })

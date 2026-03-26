@@ -1,5 +1,5 @@
 import React, { createContext, useContext } from 'react'
-import { isPathChanged, isArrayAppended } from '../shared/patches'
+import { isPathChanged } from '../shared/patches'
 
 const DisplayContext = createContext({
   onRoll: null,
@@ -21,14 +21,6 @@ export function useDisplay() {
 export function useIsChanged(path) {
   const { changedPaths } = useDisplay()
   return isPathChanged(changedPaths, path)
-}
-
-/**
- * Check if an array had items appended via a template patch.
- */
-export function useIsArrayAppended(arrayPath) {
-  const { changedPaths } = useDisplay()
-  return isArrayAppended(changedPaths, arrayPath)
 }
 
 export default DisplayContext

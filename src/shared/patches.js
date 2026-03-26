@@ -80,10 +80,3 @@ export function isPathChanged(changedPaths, path) {
   return false
 }
 
-/**
- * Check if an array had items appended.
- */
-export function isArrayAppended(changedPaths, arrayPath) {
-  if (!changedPaths || !arrayPath) return false
-  return changedPaths.has(arrayPath)
-}
