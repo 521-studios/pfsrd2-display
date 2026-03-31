@@ -8,7 +8,7 @@ const Speed = (props) => {
 
   return (
     <div className='Monster__speed'>
-      <strong>Speed{' '}</strong>
+      <strong className="Monster__heading">Speed{' '}</strong>
       {speed.movement.map((m, i) =>
         <Changed path={`/stat_block/offense/speed/movement/${i}`} key={i}>
           <span>

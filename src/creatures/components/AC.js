@@ -9,7 +9,7 @@ const AC = (props) => {
 
   return (
     <span className='Monster__ac'>
-      <strong>AC </strong>
+      <strong className="Monster__heading">AC </strong>
       <Changed path="/stat_block/defense/ac/value">{ac.value}</Changed>
       <Modifiers modifiers={ac.modifiers} />
     </span>

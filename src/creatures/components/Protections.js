@@ -10,7 +10,7 @@ const Protections = (props) => {
 
   return (
     <span className='Monster_protections'>
-      {'; '}<strong>{capitalize(protectionType)}</strong>{' '}
+      {'; '}<strong className="Monster__heading">{capitalize(protectionType)}</strong>{' '}
       {protections.map((p, i) => {
         return (
           <Changed path={changePath ? `${changePath}/${i}` : null} key={i}>

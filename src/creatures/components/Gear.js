@@ -9,7 +9,7 @@ const Gear = (props) => {
 
   return (
     <div className='Monster__gear'>
-      <strong>Items </strong>
+      <strong className="Monster__heading">Items </strong>
       {gear.map((item, i) => {
         return (
           <Item item={item} i={i} key={i}>{comma(i, gear)}</Item>

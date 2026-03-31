@@ -22,7 +22,7 @@ const Knowledges = (props) => {
 
   return (
     <div className='Monster__knowledge'>
-      <strong>Recall Knowledge</strong>
+      <strong className="Monster__heading">Recall Knowledge</strong>
       &nbsp;{text}
     </div>
   )

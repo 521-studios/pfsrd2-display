@@ -1,11 +1,17 @@
-import React from 'react'
+import React, { useState, useCallback } from 'react'
 import InlineAbility from './InlineAbility'
 import Changed from '../../shared/Changed'
+import UMAExpansion from '../../shared/UMAExpansion'
 import { comma } from '../../shared/utils'
 import Protections from './Protections'
 
 const Hitpoints = (props) => {
   const { hp, hpIndex = 0 } = props
+  const [expandedUMAs, setExpandedUMAs] = useState({})
+
+  const toggleUMA = useCallback((name) => {
+    setExpandedUMAs(prev => ({ ...prev, [name]: !prev[name] }))
+  }, [])
 
   if (!hp) { return null }
 
@@ -34,7 +40,7 @@ const Hitpoints = (props) => {
     if (hp.thresholds) {
       return (
         <span>
-          {'; '}<strong>Thresholds</strong>{' '}
+          {'; '}<strong className="Monster__heading">Thresholds</strong>{' '}
           {hp.thresholds.map((t, i) => {
             return ` ${t.value} (${t.squares} squares)${comma(i, hp.thresholds)}`
           })}
@@ -47,7 +53,7 @@ const Hitpoints = (props) => {
     if (hp.hardness) {
       return (
         <span>
-          {'; '}<strong>Hardness</strong>{' '}
+          {'; '}<strong className="Monster__heading">Hardness</strong>{' '}
           {hp.hardness}
         </span>
       )
@@ -56,29 +62,38 @@ const Hitpoints = (props) => {
 
   let abilities = hp.automatic_abilities
 
+  const expandedAbilities = abilities
+    ? abilities.filter(a => expandedUMAs[a.name] && a.universal_monster_ability)
+    : []
+
   return (
     <div className='Monster__hitpoints'>
-      <strong>HP</strong>
-      {' '}
-      <Changed path={`/stat_block/defense/hitpoints/${hpIndex}/hp`}>{hp.hp}</Changed>
-      {opening(hp)}
-      {hpName(hp)}
-      {abilities ? <span>
-        {abilities.map((a, i) => {
-          return (
-            <InlineAbility ability={a} key={i}>{comma(i, abilities)}</InlineAbility>
-          )
-        })}
-      </span> : null}
-      {closing(hp)}
-      {renderThresholds(hp)}
-      {renderHardness(hp)}
-      <Protections protections={hp.immunities} protectionType='Immunities'
-        changePath={`/stat_block/defense/hitpoints/${hpIndex}/immunities`} />
-      <Protections protections={hp.resistances} protectionType='Resistances'
-        changePath={`/stat_block/defense/hitpoints/${hpIndex}/resistances`} />
-      <Protections protections={hp.weaknesses} protectionType='Weaknesses'
-        changePath={`/stat_block/defense/hitpoints/${hpIndex}/weaknesses`} />
+      <div>
+        <strong className="Monster__heading">HP</strong>
+        {' '}
+        <Changed path={`/stat_block/defense/hitpoints/${hpIndex}/hp`}>{hp.hp}</Changed>
+        {opening(hp)}
+        {hpName(hp)}
+        {abilities ? <span>
+          {abilities.map((a, i) => {
+            return (
+              <InlineAbility ability={a} key={i} onToggleUMA={toggleUMA}>{comma(i, abilities)}</InlineAbility>
+            )
+          })}
+        </span> : null}
+        {closing(hp)}
+        {renderThresholds(hp)}
+        {renderHardness(hp)}
+        <Protections protections={hp.immunities} protectionType='Immunities'
+          changePath={`/stat_block/defense/hitpoints/${hpIndex}/immunities`} />
+        <Protections protections={hp.resistances} protectionType='Resistances'
+          changePath={`/stat_block/defense/hitpoints/${hpIndex}/resistances`} />
+        <Protections protections={hp.weaknesses} protectionType='Weaknesses'
+          changePath={`/stat_block/defense/hitpoints/${hpIndex}/weaknesses`} />
+      </div>
+      {expandedAbilities.map(a => (
+        <UMAExpansion uma={a.universal_monster_ability} key={a.name} />
+      ))}
     </div>
   )
 }

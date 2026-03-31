@@ -4,11 +4,11 @@ import Changed from '../../shared/Changed'
 
 const getListTitle = (spell_list) => {
   if (spell_list.constant) {
-    return (<strong>Constant {spell_list.level_text}</strong>)
+    return (<strong className="Monster__heading">Constant {spell_list.level_text}</strong>)
   } else if (spell_list.cantrips) {
-    return (<strong>Cantrips {spell_list.level_text}</strong>)
+    return (<strong className="Monster__heading">Cantrips {spell_list.level_text}</strong>)
   } else {
-    return (<strong>{spell_list.level_text}</strong>)
+    return (<strong className="Monster__heading">{spell_list.level_text}</strong>)
   }
 }
 

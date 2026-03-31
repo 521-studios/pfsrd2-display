@@ -65,7 +65,7 @@ const Spells = (props) => {
 
   return (
     <div key={i}>
-      <strong>{spells.name}{' '}</strong>
+      <strong className="Monster__ability-name">{spells.name}{' '}</strong>
       {modifiers}{' '}
       {spells.spell_list.map((sl, j) => {
         return (<SpellList spell_list={sl} basePath={basePath ? `${basePath}/spell_list/${j}` : null} key={j} />)
