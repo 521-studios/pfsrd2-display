@@ -74,9 +74,8 @@ const Ability = (props) => {
     period = "."
 
     // Handle both array (1.4) and object (1.3) formats
-    const saves = Array.isArray(ability.saving_throw)
-      ? ability.saving_throw
-      : [ability.saving_throw]
+    const isArray = Array.isArray(ability.saving_throw)
+    const saves = isArray ? ability.saving_throw : [ability.saving_throw]
 
     return (
       <span>
@@ -84,7 +83,7 @@ const Ability = (props) => {
         <strong>{ability.ability_type === 'affliction' ? 'Saving Throw' : 'Save'}</strong>
         {' '}
         {saves.map((st, j) => (
-          <Changed path={basePath ? `${basePath}/saving_throw/${j}` : null} key={j}>
+          <Changed path={basePath ? (isArray ? `${basePath}/saving_throw/${j}` : `${basePath}/saving_throw`) : null} key={j}>
             <span>
               {j > 0 ? ', ' : ''}
               {st.basic ? 'basic ' : ''}
