@@ -1,9 +1,11 @@
 import React from 'react'
 import Action from './Action'
+import Modifiers from './Modifiers'
+import Changed from '../../shared/Changed'
 import Markdown from '../../shared/Markdown'
 
 const Ability = (props) => {
-  const { ability, i } = props
+  const { ability, i, basePath } = props
 
   if (!ability) { return null }
 
@@ -42,12 +44,27 @@ const Ability = (props) => {
   const renderRange = (ability) => {
     if (!ability.range) { return null }
     period = "."
+    const r = ability.range
+    const display = r.touch ? 'touch' : r.text || `${r.range} ${r.unit}`
     return (
       <span>
         {' '}
         <strong>Range</strong>
         {' '}
-        <span>{ability.range.range} {ability.range.unit}</span>
+        <span>{display}<Modifiers modifiers={r.modifiers} /></span>
+      </span>
+    )
+  }
+
+  const renderArea = (ability) => {
+    if (!ability.area || ability.area.length === 0) { return null }
+    period = "."
+    return (
+      <span>
+        {' '}
+        <strong>Area</strong>
+        {' '}
+        {ability.area.map((a, i) => a.text || `${a.size}-${a.unit} ${a.shape}`).join(', ')}
       </span>
     )
   }
@@ -55,20 +72,28 @@ const Ability = (props) => {
   const renderSavingThrow = (ability) => {
     if (!ability.saving_throw) { return null }
     period = "."
+
+    // Handle both array (1.4) and object (1.3) formats
+    const isArray = Array.isArray(ability.saving_throw)
+    const saves = isArray ? ability.saving_throw : [ability.saving_throw]
+
     return (
       <span>
         {' '}
-        <strong>Save</strong>
+        <strong>{ability.ability_type === 'affliction' ? 'Saving Throw' : 'Save'}</strong>
         {' '}
-        <span>
-          DC{
-            ability.saving_throw.dc ? ` ${ability.saving_throw.dc}` : ""
-          }{
-            ability.saving_throw.save_type ? ` ${ability.saving_throw.save_type}` : ''
-          }{
-            ability.saving_throw.result ? ` ${ability.saving_throw.result}` : ''
-          }
-        </span>
+        {saves.map((st, j) => (
+          <Changed path={basePath ? (isArray ? `${basePath}/saving_throw/${j}` : `${basePath}/saving_throw`) : null} key={j}>
+            <span>
+              {j > 0 ? ', ' : ''}
+              {st.basic ? 'basic ' : ''}
+              DC{st.dc ? ` ${st.dc}` : ''}
+              {st.save_type ? ` ${st.save_type}` : ''}
+              {st.result ? ` ${st.result}` : ''}
+              <Modifiers modifiers={st.modifiers} />
+            </span>
+          </Changed>
+        ))}
       </span>
     )
   }
@@ -91,14 +116,16 @@ const Ability = (props) => {
     if (!ability.damage) { return null }
     period = "."
     return (
-      <span>
-        {' '}
-        <strong>Damage</strong>
-        {' '}
-        {ability.damage.map((d, i) =>
-          `${_dam(d)}`).join(', ')
-        }
-      </span>
+      <Changed path={basePath ? `${basePath}/damage` : null}>
+        <span>
+          {' '}
+          <strong>Damage</strong>
+          {' '}
+          {ability.damage.map((d, i) =>
+            `${_dam(d)}`).join(', ')
+          }
+        </span>
+      </Changed>
     )
   }
 
@@ -124,12 +151,25 @@ const Ability = (props) => {
     )
   }
 
+  const renderStages = (stages) => {
+    if (!stages || stages.length === 0) { return null }
+    return stages.map((s, j) => (
+      <span key={j}>
+        {separator()}
+        <strong>{s.name || `Stage ${j + 1}`}</strong>
+        {' '}<Markdown text={s.text} />
+      </span>
+    ))
+  }
+
   return (
     <div key={i}>
       <strong>{ability.name}</strong> {
         renderAction(ability)
       }{
         renderTraits(ability)
+      }{
+        renderArea(ability)
       }{
         renderRange(ability)
       }{
@@ -141,17 +181,29 @@ const Ability = (props) => {
           ? null
           : <Markdown text={ability.text} />
       }{
+        renderSection(ability.context, null)
+      }{
         renderSection(ability.cost, "Cost")
       }{
         renderSection(ability.prerequisite, "Prerequisite")
       }{
         renderSection(ability.requirement, "Requirement")
       }{
+        renderSection(ability.requirements, "Requirements")
+      }{
         renderSection(ability.frequency, "Frequency")
       }{
         renderSection(ability.trigger, "Trigger")
       }{
         renderSection(ability.effect, "Effect")
+      }{
+        renderSection(ability.onset, "Onset")
+      }{
+        renderSection(ability.maximum_duration, "Maximum Duration")
+      }{
+        renderStages(ability.stages)
+      }{
+        renderSection(ability.special, "Special")
       }{
         renderSuccess(ability.critical_success, "Critical Success")
       }{

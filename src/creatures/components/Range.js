@@ -6,8 +6,12 @@ const Range = props => {
 
   if (!range) { return null }
 
+  const display = range.touch
+    ? 'touch'
+    : range.text || `${range.range} ${range.unit}`
+
   return (
-    <span className="Monster__range">&nbsp;{range.range} {range.unit}<Modifiers modifiers={range.modifiers} /></span>
+    <span className="Monster__range">&nbsp;{display}<Modifiers modifiers={range.modifiers} /></span>
   )
 }
 

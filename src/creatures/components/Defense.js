@@ -3,7 +3,6 @@ import Ability from './Ability'
 import AC from './AC'
 import Saves from './Saves'
 import Hitpoints from './Hitpoints'
-import Changed from '../../shared/Changed'
 
 const Defense = (props) => {
   const { defense } = props
@@ -25,9 +24,8 @@ const Defense = (props) => {
         <div className='Monster__abilities'>
           {defense.automatic_abilities.map((ability, i) => {
             return (
-              <Changed path={`/stat_block/defense/automatic_abilities/${i}`} block key={i}>
-                <Ability ability={ability} i={i} />
-              </Changed>
+              <Ability ability={ability} i={i}
+                basePath={`/stat_block/defense/automatic_abilities/${i}`} key={i} />
             )
           })}
         </div>
@@ -36,9 +34,8 @@ const Defense = (props) => {
         <div className='Monster__abilities'>
           {defense.reactive_abilities.map((ability, i) => {
             return (
-              <Changed path={`/stat_block/defense/reactive_abilities/${i}`} block key={i}>
-                <Ability ability={ability} i={i} />
-              </Changed>
+              <Ability ability={ability} i={i}
+                basePath={`/stat_block/defense/reactive_abilities/${i}`} key={i} />
             )
           })}
         </div>

@@ -80,15 +80,17 @@ const Attack = (props) => {
           {attack.damage.map((d, j) => {
             const dmgBasePath = `/stat_block/offense/offensive_actions/${i}/attack/damage/${j}`
             return (
-              <span key={j}>
-                {j === 0 ? null : <React.Fragment>, </React.Fragment>}
-                {d.formula ? <RollableText type="formula" label={d.label} formula={d.formula}>{d.formula}</RollableText> : null}
-                {d.effect ? <React.Fragment>{' '}{d.effect}</React.Fragment> : null}
-                {d.persistent ? <React.Fragment>{' '}persistent</React.Fragment> : null}
-                {d.splash ? <React.Fragment>{' '}splash</React.Fragment> : null}
-                {d.damage_type ? <Changed path={`${dmgBasePath}/damage_type`}><React.Fragment>{' '}{d.damage_type}</React.Fragment></Changed> : null}
-                {d.notes ? <Changed path={`${dmgBasePath}/notes`}><React.Fragment>{' '}{d.notes}</React.Fragment></Changed> : null}
-              </span>
+              <Changed path={dmgBasePath} key={j}>
+                <span>
+                  {j === 0 ? null : <React.Fragment>, </React.Fragment>}
+                  {d.formula ? <RollableText type="formula" label={d.label} formula={d.formula}>{d.formula}</RollableText> : null}
+                  {d.effect ? <React.Fragment>{' '}{d.effect}</React.Fragment> : null}
+                  {d.persistent ? <React.Fragment>{' '}persistent</React.Fragment> : null}
+                  {d.splash ? <React.Fragment>{' '}splash</React.Fragment> : null}
+                  {d.damage_type ? <React.Fragment>{' '}{d.damage_type}</React.Fragment> : null}
+                  {d.notes ? <React.Fragment>{' '}{d.notes}</React.Fragment> : null}
+                </span>
+              </Changed>
             )
           })}
         </React.Fragment>

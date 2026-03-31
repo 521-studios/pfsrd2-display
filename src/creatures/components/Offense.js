@@ -20,7 +20,8 @@ const Offense = (props) => {
         } else if (oa.offensive_action_type === 'affliction') {
           return (<Affliction affliction={oa.affliction} i={i} key={i} />)
         } else if (oa.offensive_action_type === 'ability') {
-          return (<Ability ability={oa.ability} i={i} key={i} />)
+          return (<Ability ability={oa.ability} i={i}
+            basePath={`/stat_block/offense/offensive_actions/${i}/ability`} key={i} />)
         } else if (oa.offensive_action_type === 'mythic_ability') {
           return (<MythicAbility mythicAbility={oa.mythic_ability} i={i} key={i} />)
         }
