@@ -15,7 +15,7 @@ const Languages = (props) => {
 
   return (
     <div className='Monster__languages'>
-      <strong>Languages </strong>
+      <strong className="Monster__heading">Languages </strong>
       {langs ? langs.map((l, i) =>
         <Changed path={`/stat_block/statistics/languages/languages/${i}`} key={i}>
           <Language language={l} i={i}>{comma(i, langs)}</Language>

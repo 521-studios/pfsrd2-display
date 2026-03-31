@@ -19,7 +19,7 @@ const AbilityScores = (props) => {
       {ability_scores.map((as, i) => {
         return (
           <span key={i} className='Monster__abilityScore'>
-            <strong>{capitalize(as[0])}</strong>{' '}
+            <strong className="Monster__heading">{capitalize(as[0])}</strong>{' '}
             <RollableText type="d20" label={`${monsterName} ${capitalize(as[0])}`} formula={`1d20${decoratedNumber(as[1])}`}>
               {decoratedNumber(as[1])}
             </RollableText>

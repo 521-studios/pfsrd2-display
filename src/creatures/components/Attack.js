@@ -76,7 +76,7 @@ const Attack = (props) => {
       const label = `${monsterName} ${attack.weapon} Damage`
       return (
         <React.Fragment>
-          <strong> <RollableText type="complex" label={label} structuredFormula={sf}>Damage</RollableText></strong>&nbsp;
+          <strong className="Monster__ability-label"> <RollableText type="complex" label={label} structuredFormula={sf}>Damage</RollableText></strong>&nbsp;
           {attack.damage.map((d, j) => {
             const dmgBasePath = `/stat_block/offense/offensive_actions/${i}/attack/damage/${j}`
             return (
@@ -126,9 +126,9 @@ const Attack = (props) => {
     }
     return (
       <React.Fragment>
-        <strong>Requirements</strong>&nbsp;
+        <strong className="Monster__ability-label">Requirements</strong>&nbsp;
         {attack.requirement};&nbsp;
-        <strong>Effect</strong>&nbsp;
+        <strong className="Monster__ability-label">Effect</strong>&nbsp;
       </React.Fragment>
     )
   }
@@ -140,7 +140,7 @@ const Attack = (props) => {
 
   return (
     <div key={i}>
-      <strong>{attack.name}{' '}</strong>
+      <strong className="Monster__ability-name">{attack.name}{' '}</strong>
       {action ? <Action name={action.name} /> : null}
       {requirements()}
       {attack.weapon} {bonuses}

@@ -3,13 +3,20 @@ import Range from './Range'
 import Modifiers from './Modifiers'
 
 const SpecialSense = (props) => {
-  const { specialSense, i, children } = props
+  const { specialSense, i, children, onToggleUMA } = props
 
   if (!specialSense) { return null }
 
+  const hasUMA = !!specialSense.universal_monster_ability
+  const nameEl = hasUMA ? (
+    <span className="Monster__uma-toggle" onClick={() => onToggleUMA && onToggleUMA(specialSense.name)}>
+      {specialSense.name}
+    </span>
+  ) : specialSense.name
+
   return (
     <span className='Monster__inlineAbility' key={i}>
-      {specialSense.name}<Modifiers modifiers={specialSense.modifiers} /><Range range={specialSense.range} />{children}
+      {nameEl}<Modifiers modifiers={specialSense.modifiers} /><Range range={specialSense.range} />{children}
     </span>
   )
 }

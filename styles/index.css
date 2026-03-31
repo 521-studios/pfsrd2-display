@@ -13,6 +13,7 @@
 
 .Monster__name {
   flex: 1 1 auto;
+  color: #e8c882;
 }
 
 .Monster__level {
@@ -73,6 +74,49 @@
 
 .Monster__roll:hover {
   background-color: #f5e1cf;
+}
+
+/* Headings and names use gold; labels stay default */
+.Monster__heading,
+.Monster__ability-name {
+  color: #e8c882;
+}
+
+.Monster__ability-label {
+  /* Consumers can override to differentiate labels from names */
+}
+
+/* Universal Monster Ability expansion */
+.Monster__uma-toggle {
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+}
+
+.Monster__uma-toggle:hover {
+  text-decoration-style: solid;
+}
+
+.Monster__uma-expansion {
+  margin: 4px 0 4px 1.5em;
+  padding: 6px 10px;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-left: 2px solid #555;
+  border-radius: 0 4px 4px 0;
+  font-size: 13px;
+  line-height: 1.4em;
+  text-indent: 0;
+}
+
+/* Inside abilities with hanging indent, don't double up the left margin */
+.Monster__abilities .Monster__uma-expansion,
+.Monster__offense .Monster__uma-expansion {
+  margin-left: 0;
+}
+
+.Monster__uma-expansion-title {
+  margin-bottom: 2px;
 }
 
 /* Template change highlighting — inline values */

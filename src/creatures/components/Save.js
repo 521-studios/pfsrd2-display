@@ -13,7 +13,7 @@ const Save = (props) => {
 
   return (
     <span className='Monster__save'>
-      <strong>{save.name}</strong>{' '}
+      <strong className="Monster__heading">{save.name}</strong>{' '}
       <Changed path={changePath}>
         <RollableText type="d20" label={`${monsterName} ${save.name}`} formula={`1d20${decoratedNumber(save.value)}`}>
           {decoratedNumber(save.value)}

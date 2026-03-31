@@ -46,33 +46,44 @@ const TemplateAbility = ({ ability }) => {
   const action = ability.action_type || ability.action
   return (
     <div className="Monster__template-ability">
-      <strong>{ability.name}</strong>
+      <strong className="Monster__ability-name">{ability.name}</strong>
       {action ? <span>{' '}<Action name={action.name} /></span> : null}
       {ability.text ? <span>{' '}<Markdown text={ability.text} /></span> : null}
     </div>
   )
 }
 
-const TemplateChange = ({ change }) => {
-  const hasAbilities = change.abilities && change.abilities.length > 0
+const TemplateChanges = ({ changes }) => {
+  if (!changes || changes.length === 0) return null
 
-  if (hasAbilities) {
-    // For ability changes, show a short label then render abilities individually
-    return (
-      <div className="Monster__template-change">
-        <Markdown text="- Add the following abilities." />
-        <div className="Monster__template-abilities">
-          {change.abilities.map((a, i) => (
-            <TemplateAbility ability={a} key={i} />
-          ))}
-        </div>
-      </div>
-    )
+  // Separate ability changes from text-only changes
+  const textChanges = []
+  const abilityChanges = []
+  for (const c of changes) {
+    if (c.abilities && c.abilities.length > 0) {
+      abilityChanges.push(c)
+    } else if (c.text) {
+      textChanges.push(c.text)
+    }
   }
 
+  // Concatenate text changes into one Markdown block so list items
+  // render as a single <ul> instead of separate <ul>s with gaps
+  const combinedText = textChanges.join('\n')
+
   return (
-    <div className="Monster__template-change">
-      <Markdown text={change.text} />
+    <div className="Monster__template-changes">
+      {combinedText ? <Markdown text={combinedText} /> : null}
+      {abilityChanges.map((c, i) => (
+        <div key={i} className="Monster__template-change">
+          <Markdown text="- Add the following abilities." />
+          <div className="Monster__template-abilities">
+            {c.abilities.map((a, j) => (
+              <TemplateAbility ability={a} key={j} />
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   )
 }
@@ -99,13 +110,7 @@ const TemplateStatBlock = ({ template }) => {
               <Markdown text={template.text} />
             </div>
           ) : null}
-          {changes.length > 0 ? (
-            <div className="Monster__template-changes">
-              {changes.map((c, i) => (
-                <TemplateChange change={c} key={i} />
-              ))}
-            </div>
-          ) : null}
+          <TemplateChanges changes={changes} />
           <AdjustmentsTable adjustments={adjustments} />
           {template.sources && template.sources.length > 0 ? (
             <div className="Monster__template-source">

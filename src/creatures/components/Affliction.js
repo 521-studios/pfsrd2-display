@@ -28,7 +28,7 @@ const Affliction = (props) => {
       return (
         <span>
           {separator()}
-          <strong>Saving Throw</strong>{' '}
+          <strong className="Monster__ability-label">Saving Throw</strong>{' '}
           <span>
             {affliction.saving_throw.save_type} DC {affliction.saving_throw.dc}
             <Modifiers modifiers={affliction.saving_throw.modifiers} />
@@ -43,7 +43,7 @@ const Affliction = (props) => {
     return (
       <span>
         {separator()}
-        {name ? <strong>{name}</strong> : null}
+        {name ? <strong className="Monster__ability-label">{name}</strong> : null}
         {' '}
         <Markdown text={section} />
       </span>
@@ -55,7 +55,7 @@ const Affliction = (props) => {
 
   return (
     <div key={i}>
-      <strong>{affliction.name}{' '}</strong>
+      <strong className="Monster__ability-name">{affliction.name}{' '}</strong>
       {action ? <Action name={action.name} /> : null}
       {traits}
       {' '}{
@@ -73,7 +73,7 @@ const Affliction = (props) => {
       }
       {affliction.stages ? affliction.stages.map((s, j) => {
         return (
-          <span key={j}>{separator()}<strong>Stage {j + 1}</strong>{' '}{s.text}</span>
+          <span key={j}>{separator()}<strong className="Monster__ability-label">Stage {j + 1}</strong>{' '}{s.text}</span>
         )
       }) : null}{
         renderSection(affliction.special, "Special")

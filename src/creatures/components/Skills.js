@@ -9,7 +9,7 @@ const Skills = (props) => {
 
   return (
     <div className='Monster__skills'>
-      <strong>Skills </strong>
+      <strong className="Monster__heading">Skills </strong>
       {skills.map((s, i) => {
         return (
           <Skill skill={s} i={i} changePath={`/stat_block/statistics/skills/${i}/value`} key={i}>{comma(i, skills)}</Skill>

@@ -1,11 +1,13 @@
-import React from 'react'
+import React, { useState } from 'react'
 import Action from './Action'
 import Modifiers from './Modifiers'
 import Changed from '../../shared/Changed'
+import UMAExpansion from '../../shared/UMAExpansion'
 import Markdown from '../../shared/Markdown'
 
 const Ability = (props) => {
   const { ability, i, basePath } = props
+  const [umaExpanded, setUmaExpanded] = useState(false)
 
   if (!ability) { return null }
 
@@ -49,7 +51,7 @@ const Ability = (props) => {
     return (
       <span>
         {' '}
-        <strong>Range</strong>
+        <strong className="Monster__ability-label">Range</strong>
         {' '}
         <span>{display}<Modifiers modifiers={r.modifiers} /></span>
       </span>
@@ -62,7 +64,7 @@ const Ability = (props) => {
     return (
       <span>
         {' '}
-        <strong>Area</strong>
+        <strong className="Monster__ability-label">Area</strong>
         {' '}
         {ability.area.map((a, i) => a.text || `${a.size}-${a.unit} ${a.shape}`).join(', ')}
       </span>
@@ -80,7 +82,7 @@ const Ability = (props) => {
     return (
       <span>
         {' '}
-        <strong>{ability.ability_type === 'affliction' ? 'Saving Throw' : 'Save'}</strong>
+        <strong className="Monster__ability-label">{ability.ability_type === 'affliction' ? 'Saving Throw' : 'Save'}</strong>
         {' '}
         {saves.map((st, j) => (
           <Changed path={basePath ? (isArray ? `${basePath}/saving_throw/${j}` : `${basePath}/saving_throw`) : null} key={j}>
@@ -119,7 +121,7 @@ const Ability = (props) => {
       <Changed path={basePath ? `${basePath}/damage` : null}>
         <span>
           {' '}
-          <strong>Damage</strong>
+          <strong className="Monster__ability-label">Damage</strong>
           {' '}
           {ability.damage.map((d, i) =>
             `${_dam(d)}`).join(', ')
@@ -133,7 +135,7 @@ const Ability = (props) => {
     if (!success) { return null }
     return (
       <div className='Monster__ability_success'>
-        <strong>{name}</strong>
+        <strong className="Monster__ability-label">{name}</strong>
         {' '}{success}
       </div>
     )
@@ -144,7 +146,7 @@ const Ability = (props) => {
     return (
       <span>
         {separator()}
-        <strong>{name}</strong>
+        <strong className="Monster__ability-label">{name}</strong>
         {' '}
         <Markdown text={section} />
       </span>
@@ -156,15 +158,24 @@ const Ability = (props) => {
     return stages.map((s, j) => (
       <span key={j}>
         {separator()}
-        <strong>{s.name || `Stage ${j + 1}`}</strong>
+        <strong className="Monster__ability-label">{s.name || `Stage ${j + 1}`}</strong>
         {' '}<Markdown text={s.text} />
       </span>
     ))
   }
 
+  const hasUMA = !!ability.universal_monster_ability
+  const nameEl = hasUMA ? (
+    <strong className="Monster__ability-name Monster__uma-toggle" onClick={() => setUmaExpanded(!umaExpanded)}>
+      {ability.name}
+    </strong>
+  ) : (
+    <strong className="Monster__ability-name">{ability.name}</strong>
+  )
+
   return (
     <div key={i}>
-      <strong>{ability.name}</strong> {
+      {nameEl} {
         renderAction(ability)
       }{
         renderTraits(ability)
@@ -213,6 +224,7 @@ const Ability = (props) => {
       }{
         renderSuccess(ability.critical_failure, "Critical Failure")
       }
+      {umaExpanded ? <UMAExpansion uma={ability.universal_monster_ability} /> : null}
     </div>
   )
 }
