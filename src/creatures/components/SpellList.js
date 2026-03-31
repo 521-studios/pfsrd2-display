@@ -1,5 +1,6 @@
 import React from 'react'
 import Spell from './Spell'
+import Changed from '../../shared/Changed'
 
 const getListTitle = (spell_list) => {
   if (spell_list.constant) {
@@ -12,7 +13,7 @@ const getListTitle = (spell_list) => {
 }
 
 const SpellList = (props) => {
-  const { spell_list } = props
+  const { spell_list, basePath } = props
 
   if (!spell_list) { return null }
 
@@ -23,10 +24,12 @@ const SpellList = (props) => {
       {list_title}{' '}
       {spell_list.spells.map((s, i) => {
         return (
-          <React.Fragment key={i}>
-            <Spell spell={s} />
-            {i < spell_list.spells.length - 1 ? ", " : ""}
-          </React.Fragment>
+          <Changed path={basePath ? `${basePath}/spells/${i}` : null} key={i}>
+            <span>
+              <Spell spell={s} />
+              {i < spell_list.spells.length - 1 ? ", " : ""}
+            </span>
+          </Changed>
         )
       })}
       ;{' '}

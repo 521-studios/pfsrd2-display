@@ -1,11 +1,12 @@
 import React from 'react'
 import SpellList from './SpellList'
 import RollableText from '../../shared/RollableText'
+import Changed from '../../shared/Changed'
 import { useDisplay } from '../../context/DisplayContext'
 import { decoratedNumber } from '../../shared/utils'
 
 const Spells = (props) => {
-  const { spells, i } = props
+  const { spells, i, basePath } = props
   const { monsterName } = useDisplay()
 
   if (!spells) { return null }
@@ -13,17 +14,28 @@ const Spells = (props) => {
   const getModifiers = () => {
     let items = []
     if (spells.saving_throw) {
-      items.push(` DC ${spells.saving_throw.dc}`)
+      const dc = spells.saving_throw.dc
+      items.push(
+        <Changed path={basePath ? `${basePath}/saving_throw/dc` : null} key="dc">
+          <span> DC {dc}</span>
+        </Changed>
+      )
     }
     if (spells.focus_points) {
       if (spells.focus_points === 1) {
-        items.push(` ${spells.focus_points} Focus Point`)
+        items.push(<span key="fp"> {spells.focus_points} Focus Point</span>)
       } else {
-        items.push(` ${spells.focus_points} Focus Points`)
+        items.push(<span key="fp"> {spells.focus_points} Focus Points</span>)
       }
     }
     if (spells.notes) {
-      items.push.apply(items, spells.notes)
+      spells.notes.forEach((note, j) => {
+        items.push(
+          <Changed path={basePath ? `${basePath}/notes` : null} key={`note-${j}`}>
+            <span>{items.length > 0 ? ', ' : ' '}{note}</span>
+          </Changed>
+        )
+      })
     }
     let label = `${spells.name} Attack`
     let spell_attack = null
@@ -35,12 +47,14 @@ const Spells = (props) => {
     }
     return (
       <span>
-        {items.join(', ')}
+        {items}
         {items.length > 0 && spell_attack ? <span>{', '}</span> : null}
         {spell_attack ? <span>attack{' '}
-          <RollableText type="d20" label={`${monsterName} ${label}`} formula={`1d20${decoratedNumber(spell_attack)}`}>
-            {decoratedNumber(spell_attack)}
-          </RollableText>
+          <Changed path={basePath ? `${basePath}/spell_attack` : null}>
+            <RollableText type="d20" label={`${monsterName} ${label}`} formula={`1d20${decoratedNumber(spell_attack)}`}>
+              {decoratedNumber(spell_attack)}
+            </RollableText>
+          </Changed>
         </span> : null};
       </span>
     )
@@ -53,7 +67,7 @@ const Spells = (props) => {
       <strong>{spells.name}{' '}</strong>
       {modifiers}{' '}
       {spells.spell_list.map((sl, j) => {
-        return (<SpellList spell_list={sl} key={j} />)
+        return (<SpellList spell_list={sl} basePath={basePath ? `${basePath}/spell_list/${j}` : null} key={j} />)
       })}
     </div>
   )
