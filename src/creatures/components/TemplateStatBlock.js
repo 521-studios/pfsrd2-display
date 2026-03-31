@@ -62,7 +62,7 @@ const TemplateChanges = ({ changes }) => {
   for (const c of changes) {
     if (c.abilities && c.abilities.length > 0) {
       abilityChanges.push(c)
-    } else {
+    } else if (c.text) {
       textChanges.push(c.text)
     }
   }

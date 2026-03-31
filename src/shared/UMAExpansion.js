@@ -10,7 +10,7 @@ const UMAExpansion = ({ uma }) => {
 
   return (
     <div className="Monster__uma-expansion">
-      {uma.name ? <div className="Monster__uma-expansion-title"><strong>{uma.name}</strong></div> : null}
+      {uma.name ? <div className="Monster__uma-expansion-title"><strong className="Monster__ability-name">{uma.name}</strong></div> : null}
       {uma.text ? <Markdown text={uma.text} /> : null}
       {uma.critical_success ? (
         <div className="Monster__ability_success">
