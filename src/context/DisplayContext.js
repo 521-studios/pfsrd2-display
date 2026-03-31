@@ -7,6 +7,7 @@ const DisplayContext = createContext({
   imageBaseUrl: '',
   monsterName: '',
   changedPaths: null,
+  appliedTemplates: null,
 })
 
 export const DisplayProvider = DisplayContext.Provider

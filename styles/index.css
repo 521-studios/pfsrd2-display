@@ -100,8 +100,165 @@
   border-color: #F79639;
 }
 
+/* Sections (flavor text, sidebars) */
+.Monster__sections {
+  margin-top: 8px;
+}
+
+.Monster__collapsible {
+  cursor: pointer;
+  user-select: none;
+}
+
+.Monster__collapsible:hover {
+  opacity: 0.8;
+}
+
+.Monster__collapse-icon {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 6px solid currentColor;
+  margin-right: 6px;
+  transition: transform 0.15s;
+}
+
+.Monster__collapse-icon--open {
+  transform: rotate(90deg);
+}
+
+.Monster__section-title {
+  font-weight: bold;
+  font-size: 14px;
+  margin-top: 8px;
+}
+
+.Monster__section-text {
+  margin: 4px 0;
+  line-height: 1.4em;
+  color: #bbb;
+  font-style: italic;
+}
+
+.Monster__sidebar {
+  margin: 8px 0;
+  padding: 8px 12px;
+  border-left: 3px solid #D9C484;
+  background-color: rgba(217, 196, 132, 0.08);
+  border-radius: 0 4px 4px 0;
+}
+
+.Monster__sidebar-heading {
+  font-weight: bold;
+  font-size: 13px;
+  color: #D9C484;
+  margin-bottom: 4px;
+}
+
+.Monster__sidebar-body {
+  font-size: 13px;
+  line-height: 1.4em;
+}
+
+/* Template stat block */
+.Monster__template {
+  margin-top: 4px;
+}
+
+.Monster__template-title {
+  font-weight: bold;
+  font-size: 15px;
+  font-style: italic;
+  color: #D9C484;
+}
+
+.Monster__template-body {
+  margin-top: 4px;
+  line-height: 1.4em;
+}
+
+.Monster__template-description {
+  color: #bbb;
+  font-style: italic;
+  margin-bottom: 6px;
+}
+
+.Monster__template-changes {
+  margin-bottom: 6px;
+}
+
+.Monster__template-change {
+  padding-left: 1.5em;
+  text-indent: -1.5em;
+}
+
+.Monster__template-adjustments {
+  border-collapse: collapse;
+  margin: 8px 0;
+  font-size: 13px;
+}
+
+.Monster__template-adjustments th {
+  background-color: #D9C484;
+  color: #1a1a1a;
+  padding: 3px 12px;
+  text-align: left;
+  font-weight: bold;
+}
+
+.Monster__template-adjustments td {
+  padding: 2px 12px;
+  border-bottom: 1px solid #444;
+}
+
+.Monster__template-abilities {
+  margin-left: 1.5em;
+}
+
+.Monster__template-ability {
+  padding-left: 1.5em;
+  text-indent: -1.5em;
+}
+
+.Monster__template-source {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #888;
+}
+
+/* Monster family */
+.Monster__family {
+  margin-top: 4px;
+}
+
+.Monster__family-title {
+  font-weight: bold;
+  font-size: 15px;
+  color: #D9C484;
+}
+
+.Monster__family-body {
+  margin-top: 4px;
+  line-height: 1.4em;
+}
+
+.Monster__family-text {
+  margin: 4px 0;
+  color: #bbb;
+  font-style: italic;
+}
+
+.Monster__abilities > div,
+.Monster__offense > div {
+  padding-left: 1.5em;
+  text-indent: -1.5em;
+}
+
 .Monster__ability_success {
-  text-indent: 1em;
+  text-indent: 0;
+  padding-left: 2.5em;
 }
 
 .Monster__abilities,

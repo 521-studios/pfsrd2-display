@@ -12,11 +12,14 @@ import Ability from './components/Ability'
 import Defense from './components/Defense'
 import Offense from './components/Offense'
 import MonsterCard from './components/MonsterCard'
+import Sections from './components/Sections'
+import Family from './components/Family'
+import TemplateStatBlock from './components/TemplateStatBlock'
 import { useDisplay } from '../context/DisplayContext'
 import { capitalize } from '../shared/utils'
 
 const CreatureStatBlockV1_3 = ({ data }) => {
-  const { onLoadMonster } = useDisplay()
+  const { onLoadMonster, appliedTemplates } = useDisplay()
   const stat_block = data.stat_block
   const creature_type = stat_block.creature_type
   const stats = stat_block.statistics
@@ -67,6 +70,19 @@ const CreatureStatBlockV1_3 = ({ data }) => {
       <hr />
 
       <Offense offense={stat_block.offense} />
+
+      <Sections sections={data.sections} topLevel />
+
+      <Family family={creature_type.family} />
+
+      {appliedTemplates && appliedTemplates.length > 0 ? (
+        <>
+          <hr />
+          {appliedTemplates.map((t, i) => (
+            <TemplateStatBlock template={t} key={t.name + i} />
+          ))}
+        </>
+      ) : null}
     </div>
   )
 }

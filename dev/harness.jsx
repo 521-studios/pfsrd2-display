@@ -59,7 +59,9 @@ function SearchPanel({ onSelect }) {
     timerRef.current = setTimeout(async () => {
       setLoading(true)
       try {
-        const params = new URLSearchParams({ q: query, type: 'monsters', limit: '15' })
+        const params = new URLSearchParams({ q: query, limit: '15' })
+        params.append('type', 'monsters')
+        params.append('type', 'npcs')
         const res = await fetch(`${API}/search/suggest/unified?${params}`)
         const data = await res.json()
         setResults(data || [])
@@ -77,7 +79,7 @@ function SearchPanel({ onSelect }) {
         <h2 style={{ margin: '0 0 8px' }}>pfsrd2-display</h2>
         <input
           type="text"
-          placeholder="Search creatures..."
+          placeholder="Search creatures & NPCs..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           style={styles.searchInput}
@@ -298,20 +300,26 @@ function DetailPanel({ selected, onLoadMonster }) {
       ? templateStack[templateStack.length - 1].creature
       : originalCreature
 
-    const res = await fetch(`${API}/templates/apply`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        creature: currentCreature,
-        template_game_id: template.game_id,
+    // Fetch template application and template full JSON in parallel
+    const [applyRes, templateRes] = await Promise.all([
+      fetch(`${API}/templates/apply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          creature: currentCreature,
+          template_game_id: template.game_id,
+        }),
       }),
-    })
-    if (!res.ok) throw new Error(`Template apply failed: ${res.status}`)
+      fetch(`${API}/entries/${template.game_id}/full`),
+    ])
+    if (!applyRes.ok) throw new Error(`Template apply failed: ${applyRes.status}`)
 
-    const { patches, creature } = await parseMultipartResponse(res)
+    const { patches, creature } = await parseMultipartResponse(applyRes)
+    const templateData = templateRes.ok ? await templateRes.json() : null
+
     setTemplateStack((prev) => [
       ...prev,
-      { template: { game_id: template.game_id, name: template.name }, patches, creature },
+      { template: { game_id: template.game_id, name: template.name }, patches, creature, templateData },
     ])
   }, [originalCreature, templateStack])
 
@@ -344,6 +352,15 @@ function DetailPanel({ selected, onLoadMonster }) {
     return allGroups.length > 0 ? allGroups : null
   }, [templateStack])
 
+  // Collect template full JSON objects for rendering in the stat block
+  const appliedTemplates = useMemo(() => {
+    if (templateStack.length === 0) return null
+    const templates = templateStack
+      .map((entry) => entry.templateData)
+      .filter(Boolean)
+    return templates.length > 0 ? templates : null
+  }, [templateStack])
+
   if (!selected) {
     return (
       <div style={styles.detailPanel}>
@@ -371,6 +388,7 @@ function DetailPanel({ selected, onLoadMonster }) {
               <CreatureStatBlock
                 data={displayedCreature}
                 patches={mergedPatches}
+                appliedTemplates={appliedTemplates}
                 onRoll={handleRoll}
                 onLoadMonster={onLoadMonster}
                 imageBaseUrl={`${API}/images`}

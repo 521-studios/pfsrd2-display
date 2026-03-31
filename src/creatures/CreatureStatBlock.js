@@ -12,7 +12,7 @@ const getSchemaVersion = (data) => {
   return '1.2'
 }
 
-const CreatureStatBlock = ({ data, patches, onRoll, onLoadMonster, imageBaseUrl }) => {
+const CreatureStatBlock = ({ data, patches, appliedTemplates, onRoll, onLoadMonster, imageBaseUrl }) => {
   if (!data) { return null }
 
   const changedPaths = useMemo(() => buildChangedPaths(patches, data), [patches, data])
@@ -23,6 +23,7 @@ const CreatureStatBlock = ({ data, patches, onRoll, onLoadMonster, imageBaseUrl 
     imageBaseUrl: imageBaseUrl || '',
     monsterName: data.name || '',
     changedPaths,
+    appliedTemplates: appliedTemplates || null,
   }
 
   const version = getSchemaVersion(data)
@@ -41,5 +42,4 @@ const CreatureStatBlock = ({ data, patches, onRoll, onLoadMonster, imageBaseUrl 
   )
 }
 
-export { buildChangedPaths }
 export default CreatureStatBlock
