@@ -22,16 +22,17 @@ const Spells = (props) => {
       )
     }
     if (spells.focus_points) {
+      const fpPath = basePath ? `${basePath}/focus_points` : null
       if (spells.focus_points === 1) {
-        items.push(<span key="fp"> {spells.focus_points} Focus Point</span>)
+        items.push(<Changed path={fpPath} key="fp"><span> {spells.focus_points} Focus Point</span></Changed>)
       } else {
-        items.push(<span key="fp"> {spells.focus_points} Focus Points</span>)
+        items.push(<Changed path={fpPath} key="fp"><span> {spells.focus_points} Focus Points</span></Changed>)
       }
     }
     if (spells.notes) {
       spells.notes.forEach((note, j) => {
         items.push(
-          <Changed path={basePath ? `${basePath}/notes` : null} key={`note-${j}`}>
+          <Changed path={basePath ? `${basePath}/notes/${j}` : null} key={`note-${j}`}>
             <span>{items.length > 0 ? ', ' : ' '}{note}</span>
           </Changed>
         )
