@@ -16,7 +16,8 @@ const Offense = (props) => {
         if (oa.offensive_action_type === 'attack') {
           return (<Attack attack={oa.attack} i={i} key={i} />)
         } else if (oa.offensive_action_type === 'spells') {
-          return (<Spells spells={oa.spells} i={i} key={i} />)
+          return (<Spells spells={oa.spells} i={i}
+            basePath={`/stat_block/offense/offensive_actions/${i}/spells`} key={i} />)
         } else if (oa.offensive_action_type === 'affliction') {
           return (<Affliction affliction={oa.affliction} i={i} key={i} />)
         } else if (oa.offensive_action_type === 'ability') {
