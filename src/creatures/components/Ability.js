@@ -84,7 +84,7 @@ const Ability = (props) => {
         <strong>{ability.ability_type === 'affliction' ? 'Saving Throw' : 'Save'}</strong>
         {' '}
         {saves.map((st, j) => (
-          <Changed path={basePath ? `${basePath}/saving_throw/${j}/dc` : null} key={j}>
+          <Changed path={basePath ? `${basePath}/saving_throw/${j}` : null} key={j}>
             <span>
               {j > 0 ? ', ' : ''}
               {st.basic ? 'basic ' : ''}
@@ -158,7 +158,7 @@ const Ability = (props) => {
       <span key={j}>
         {separator()}
         <strong>{s.name || `Stage ${j + 1}`}</strong>
-        {' '}{s.text}
+        {' '}<Markdown text={s.text} />
       </span>
     ))
   }
