@@ -1,6 +1,6 @@
-const { describe, it } = require('node:test')
-const assert = require('node:assert')
-const { capitalize, comma, decoratedNumber } = require('./utils')
+import { describe, it } from 'node:test'
+import assert from 'node:assert'
+import { capitalize, comma, decoratedNumber } from './utils.js'
 
 describe('capitalize', () => {
   it('capitalizes first character', () => {

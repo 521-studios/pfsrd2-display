@@ -1,6 +1,6 @@
-const { describe, it } = require('node:test')
-const assert = require('node:assert')
-const { buildChangedPaths, isPathChanged } = require('./patches')
+import { describe, it } from 'node:test'
+import assert from 'node:assert'
+import { buildChangedPaths, isPathChanged } from './patches.js'
 
 describe('buildChangedPaths', () => {
   it('returns null for null input', () => {
