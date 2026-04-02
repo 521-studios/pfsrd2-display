@@ -1,5 +1,5 @@
-const { describe, it } = require('node:test')
-const assert = require('node:assert')
+import { describe, it } from 'node:test'
+import assert from 'node:assert'
 
 // Test the getSchemaVersion logic directly by requiring the module
 // Since it's not exported, we test the behavior through the component's routing
