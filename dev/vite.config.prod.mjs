@@ -32,17 +32,9 @@ export default defineConfig({
       loader: { '.js': 'jsx' },
     },
   },
-  server: {
-    port: 5173,
-    fs: {
-      allow: [path.resolve(__dirname, '..')],
-    },
-    proxy: {
-      '/api/pfsrd2': {
-        target: 'http://pfsrd2-api:8090',
-        changeOrigin: true,
-      },
-    },
-  },
   publicDir: path.resolve(__dirname, '../assets'),
+  build: {
+    outDir: path.resolve(__dirname, '../dist-site'),
+    emptyOutDir: true,
+  },
 })
