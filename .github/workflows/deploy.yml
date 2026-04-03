@@ -53,14 +53,6 @@ jobs:
           npm ci
           npm run build:site
 
-      - name: Upload to S3
-        run: |
-          aws s3 sync dist-site/ "s3://${{ env.S3_BUCKET }}/${{ github.sha }}/" \
-            --cache-control "public, max-age=31536000, immutable" \
-            --exclude "index.html"
-          aws s3 cp dist-site/index.html "s3://${{ env.S3_BUCKET }}/${{ github.sha }}/index.html" \
-            --cache-control "no-cache"
-
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ env.TF_VERSION }}
@@ -80,6 +72,14 @@ jobs:
           terraform apply -auto-approve -input=false \
             -var="env=staging" \
             -var="active_sha=${{ github.sha }}"
+
+      - name: Upload to S3
+        run: |
+          aws s3 sync dist-site/ "s3://${{ env.S3_BUCKET }}/${{ github.sha }}/" \
+            --cache-control "public, max-age=31536000, immutable" \
+            --exclude "index.html"
+          aws s3 cp dist-site/index.html "s3://${{ env.S3_BUCKET }}/${{ github.sha }}/index.html" \
+            --cache-control "no-cache"
 
   # ── Production: manual dispatch only ──────────────────────────────────────
 
@@ -119,14 +119,6 @@ jobs:
           npm ci
           npm run build:site
 
-      - name: Upload to S3
-        run: |
-          aws s3 sync dist-site/ "s3://${{ env.S3_BUCKET }}/${{ github.sha }}/" \
-            --cache-control "public, max-age=31536000, immutable" \
-            --exclude "index.html"
-          aws s3 cp dist-site/index.html "s3://${{ env.S3_BUCKET }}/${{ github.sha }}/index.html" \
-            --cache-control "no-cache"
-
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ env.TF_VERSION }}
@@ -146,3 +138,11 @@ jobs:
           terraform apply -auto-approve -input=false \
             -var="env=production" \
             -var="active_sha=${{ github.sha }}"
+
+      - name: Upload to S3
+        run: |
+          aws s3 sync dist-site/ "s3://${{ env.S3_BUCKET }}/${{ github.sha }}/" \
+            --cache-control "public, max-age=31536000, immutable" \
+            --exclude "index.html"
+          aws s3 cp dist-site/index.html "s3://${{ env.S3_BUCKET }}/${{ github.sha }}/index.html" \
+            --cache-control "no-cache"
