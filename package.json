@@ -10,6 +10,7 @@
   "scripts": {
     "build": "rollup -c",
     "dev": "vite dev --config dev/vite.config.mjs",
+    "build:site": "vite build --config dev/vite.config.prod.mjs",
     "watch": "rollup -c -w",
     "test": "node --test src/**/*.test.js"
   },
