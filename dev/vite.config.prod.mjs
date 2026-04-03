@@ -9,11 +9,6 @@ export default defineConfig({
     jsxInJs(),
     react(),
   ],
-  optimizeDeps: {
-    esbuildOptions: {
-      loader: { '.js': 'jsx' },
-    },
-  },
   publicDir: path.resolve(__dirname, '../assets'),
   build: {
     outDir: path.resolve(__dirname, '../dist-site'),
