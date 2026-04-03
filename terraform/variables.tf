@@ -1,6 +1,11 @@
 variable "env" {
   description = "Deployment environment (staging | production)"
   type        = string
+
+  validation {
+    condition     = contains(["staging", "production"], var.env)
+    error_message = "The env variable must be one of: staging, production."
+  }
 }
 
 variable "aws_region" {
