@@ -300,15 +300,25 @@ function DetailPanel({ selected, onLoadMonster }) {
       ? templateStack[templateStack.length - 1].creature
       : originalCreature
 
+    // CloudFront OAC with Lambda Function URLs requires the client to provide
+    // x-amz-content-sha256 for POST requests — CloudFront does not compute it.
+    const applyBody = JSON.stringify({
+      creature: currentCreature,
+      template_game_id: template.game_id,
+    })
+    const bodyHash = Array.from(
+      new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(applyBody)))
+    ).map(b => b.toString(16).padStart(2, '0')).join('')
+
     // Fetch template application and template full JSON in parallel
     const [applyRes, templateRes] = await Promise.all([
       fetch(`${API}/templates/apply`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          creature: currentCreature,
-          template_game_id: template.game_id,
-        }),
+        headers: {
+          'Content-Type': 'application/json',
+          'x-amz-content-sha256': bodyHash,
+        },
+        body: applyBody,
       }),
       fetch(`${API}/entries/${template.game_id}/full`),
     ])
