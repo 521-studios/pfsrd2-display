@@ -95,6 +95,60 @@ Review React components for **unnecessary prop threading** (prop drilling).
 - `children` prop usage
 - Props that genuinely vary per instance (not shared context)
 
+## terraform-reviewer
+
+Review terraform changes in `terraform/` to ensure this app stays in its lane within the **three-layer state stack**:
+
+```
+infra (baseline) → apps (this repo) → infra-frontend
+```
+
+**This repo's layer: apps.** Its terraform owns app-specific resources only. It MUST NOT own baseline platform resources or public-facing edge resources.
+
+For full context, read `infra/CLAUDE.md` and `infra-frontend/CLAUDE.md` in the workspace before reviewing.
+
+### What this app's terraform SHOULD own
+
+- The S3 bucket(s) the SPA / library is published to.
+- IAM roles/policies the app needs (CI/CD deploy roles, OIDC trust, etc.).
+- Any CloudWatch log groups scoped to the app.
+- Outputs that `infra-frontend` consumes (e.g. SPA bucket name, regional domain, OAC ID if owned here).
+
+### What this app's terraform MUST NOT own
+
+- **CloudFront distributions** — owned by `infra-frontend` (this app's distribution lives in `infra-frontend/terraform/modules/pfsrd2-display-cf/`).
+- **ACM certificates** for public domains — owned by `infra-frontend` (must live in `us-east-1`).
+- **Public DNS records** (apex, www, custom subdomains the public hits directly) — owned by `infra-frontend`.
+- **CloudFront Functions** (e.g. SPA path rewrites) — owned by `infra-frontend`.
+- **Foundational shared resources**: VPCs, subnets, Aurora, ECS clusters — owned by `infra`.
+
+### What this app's terraform MUST NOT do
+
+- **Read from `infra-frontend` remote state.** This app deploys *before* `infra-frontend`, so the dependency direction is one-way: this repo emits outputs, `infra-frontend` consumes them.
+- **Embed AWS account IDs as literals** outside backend configs — use `data "aws_caller_identity"` or variables.
+- **Reach across into another app's resources** (e.g. `pfsrd2-data-api`'s Lambda Function URL) — apps consume from `infra` and from AWS data sources, not from peer apps.
+
+### What this app's terraform SHOULD do
+
+- **Export outputs** that `infra-frontend` consumes — naming should match what `infra-frontend/terraform/modules/pfsrd2-display-cf` already reads from this repo's remote state.
+- **Read from `infra` remote state** when consuming shared platform values.
+- **Use AWS data sources** (e.g. `data "aws_route53_zone"`) instead of hardcoding values that already exist in the account.
+
+### Cost discipline
+
+A new CloudFront distribution + ACM cert costs ~$0.60/month minimum just to exist. Before suggesting this app should own its own distribution, ask whether a path behavior on the existing `pfsrd2-display-cf` distribution is sufficient — and even when a new distribution is justified, it still belongs in `infra-frontend`, not here.
+
+### Review approach
+
+1. For each `resource "aws_*"` and `module ".*"` in the diff, ask: does this belong in the app layer, or is it overreach into `infra` or `infra-frontend`?
+2. Flag any `terraform_remote_state` block reading from `infra-frontend/<env>/terraform.tfstate`.
+3. Flag any `aws_cloudfront_distribution`, `aws_acm_certificate`, `aws_cloudfront_function`, public-facing `aws_route53_record`, or VPC/subnet/cluster resources.
+4. Flag hardcoded account IDs, region literals that mismatch the rest of the repo, duplicated provider blocks.
+5. For new outputs, confirm there's a clear consumer in `infra-frontend` — orphan outputs accumulate over time.
+6. For changes to existing outputs, confirm `infra-frontend` is being updated alongside (or a follow-up is filed).
+
+**Note:** It is acceptable to acknowledge a layering violation and defer the fix via a beads ticket — but mark it P1, not P3. Layer violations create deploy-order coupling that gets harder to untangle the longer it sits.
+
 ## clarity-reviewer
 
 Review markdown documentation for terseness. Every token costs money and attention — cut the fat.
