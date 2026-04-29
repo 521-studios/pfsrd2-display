@@ -136,13 +136,13 @@ For full context, read `infra/CLAUDE.md` and `infra-frontend/CLAUDE.md` in the w
 
 ### Cost discipline
 
-A new CloudFront distribution + ACM cert costs ~$0.60/month minimum just to exist. Before suggesting this app should own its own distribution, ask whether a path behavior on the existing `pfsrd2-display-cf` distribution is sufficient.
+CloudFront distributions and public ACM certificates are free to provision, but each new distribution adds operational surface area (invalidation paths, WAF rules, monitoring). Before suggesting this app should own its own distribution, ask whether a path behavior on the existing `pfsrd2-display-cf` distribution is sufficient.
 
 ### Review approach
 
 1. For each `resource "aws_*"` and `module ".*"` in the diff, ask: does this belong in the app layer, or is it overreach into `infra` or `infra-frontend`?
 2. Flag any `terraform_remote_state` block reading from `infra-frontend/<env>/terraform.tfstate`.
-3. Flag any `aws_cloudfront_distribution`, `aws_acm_certificate`, `aws_cloudfront_function`, `aws_cloudfront_origin_access_control`, public-facing `aws_route53_record`, or VPC/subnet/cluster/RDS resources.
+3. Flag any `aws_cloudfront_distribution`, `aws_acm_certificate`, `aws_cloudfront_function`, `aws_cloudfront_origin_access_control`, `aws_s3_bucket_policy` (if referencing CloudFront/OAC), public-facing `aws_route53_record`, or VPC/subnet/cluster/Aurora/RDS resources.
 4. Flag hardcoded account IDs, region literals that mismatch the rest of the repo, duplicated provider blocks.
 5. For new outputs, confirm there's a clear consumer in `infra-frontend` — orphan outputs accumulate over time.
 6. For changes to existing outputs, confirm `infra-frontend` is being updated alongside (or a follow-up is filed).
