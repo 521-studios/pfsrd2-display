@@ -144,7 +144,7 @@ CloudFront and ACM are free, but each distribution increases operational overhea
 
 1. For each `resource "aws_*"` and `module ".*"` in the diff, ask: does this belong in the app layer, or is it overreach into `infra`, `infra-frontend`, or a peer app?
 2. Flag any `terraform_remote_state` block — or `data` source referencing resources owned by `infra-frontend` or peer apps — that creates a cross-layer dependency.
-3. Flag any `aws_cloudfront_distribution`, `aws_acm_certificate`, `aws_cloudfront_function`, `aws_cloudfront_origin_access_control`, `aws_s3_bucket_policy` (or an inline `policy` attribute on `aws_s3_bucket`) if it references CloudFront/OAC, public-facing `aws_route53_record`, or VPC/subnet/security group/ECS cluster/RDS resources (`aws_db_instance`, `aws_rds_cluster`).
+3. Flag any `aws_cloudfront_distribution`, `aws_acm_certificate`, `aws_cloudfront_function`, `aws_cloudfront_origin_access_control`, `aws_s3_bucket_policy` (if referencing CloudFront/OAC), public-facing `aws_route53_record`, or VPC/subnet/security group/ECS cluster/Aurora/RDS resources.
 4. Flag hardcoded account IDs, region literals outside backend configs, or duplicated provider blocks.
 5. For new outputs, confirm there's a clear consumer in `infra-frontend` — orphan outputs accumulate over time.
 6. For changes to existing outputs, confirm `infra-frontend` is being updated alongside (or a follow-up is filed).
