@@ -138,7 +138,7 @@ For full context, read `infra/CLAUDE.md` and `infra-frontend/CLAUDE.md` in the w
 
 ### Cost discipline
 
-CloudFront distributions and public ACM certificates are free to provision, but each new distribution adds operational surface area (invalidation paths, WAF rules, monitoring). Before suggesting this app should own its own distribution, ask whether a path behavior on the existing `pfsrd2-display-cf` distribution is sufficient.
+CloudFront and ACM are free, but each distribution increases operational overhead (WAF, monitoring, invalidations). Prefer adding path behaviors to the existing `pfsrd2-display-cf` distribution over creating new ones.
 
 ### Review approach
 
