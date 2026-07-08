@@ -153,11 +153,24 @@ function TemplateBar({ edition, templateStack, onApply, onRemoveLast, onClearAll
   useEffect(() => {
     (async () => {
       try {
+        // applicable_to does the edition filtering server-side: entries of
+        // the creature's edition, plus other-edition entries with no
+        // same-edition counterpart via alternates OR curated equivalents.
+        // Unpaired content (Book of the Dead's Wight) still lists for
+        // remastered creatures; paired content never double-lists. This
+        // replaces client-side name matching, which cannot know about
+        // cross-type equivalence pairs (BotD vampire TEMPLATE paired with
+        // the Monster Core vampire FAMILY).
+        const editionFilter = edition
+          ? `&applicable_to=${encodeURIComponent(edition)}`
+          : ''
         const pageSize = 20
         let offset = 0
         let all = []
         while (true) {
-          const res = await fetch(`${API}/search?type=monster_templates&limit=${pageSize}&offset=${offset}`)
+          const res = await fetch(
+            `${API}/search?type=monster_templates&limit=${pageSize}&offset=${offset}${editionFilter}`
+          )
           const data = await res.json()
           const results = data.results || []
           all = all.concat(results)
@@ -169,23 +182,9 @@ function TemplateBar({ edition, templateStack, onApply, onRemoveLast, onClearAll
         console.error('Failed to load templates:', e)
       }
     })()
-  }, [])
+  }, [edition])
 
-  // Filter templates: if both editions exist for the same name, show only the one
-  // matching the creature's edition. The API auto-resolves edition mismatches anyway.
-  const templates = useMemo(() => {
-    const byName = {}
-    for (const t of allTemplates) {
-      if (!byName[t.name]) byName[t.name] = []
-      byName[t.name].push(t)
-    }
-    return allTemplates.filter((t) => {
-      const variants = byName[t.name]
-      if (variants.length === 1) return true
-      // Multiple editions exist — only show the one matching the creature
-      return t.edition === edition
-    })
-  }, [allTemplates, edition])
+  const templates = allTemplates
 
   const handleApply = async (template) => {
     setLoading(true)
