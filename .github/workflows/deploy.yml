@@ -81,6 +81,21 @@ jobs:
           aws s3 cp dist-site/index.html "s3://${{ env.S3_BUCKET }}/${{ github.sha }}/index.html" \
             --cache-control "no-cache"
 
+      - name: Invalidate CloudFront
+        run: |
+          # The distribution is owned by infra-frontend; resolve it by alias
+          # (workspace rule: look up shared primitives by name, no remote
+          # state reads). Without this, edges keep serving the previous
+          # sha's index.html until TTL — deploys silently lag.
+          DIST_ID=$(aws cloudfront list-distributions --query \
+            "DistributionList.Items[?Aliases.Items[?@=='display.pfsrd2.staging.521studios.com']].Id | [0]" \
+            --output text)
+          if [ "$DIST_ID" = "None" ] || [ -z "$DIST_ID" ]; then
+            echo "No distribution found for display.pfsrd2.staging.521studios.com" >&2; exit 1
+          fi
+          aws cloudfront create-invalidation --distribution-id "$DIST_ID" \
+            --paths "/" "/index.html"
+
   # ── Production: manual dispatch only ──────────────────────────────────────
 
   deploy-production:
@@ -146,3 +161,18 @@ jobs:
             --exclude "index.html"
           aws s3 cp dist-site/index.html "s3://${{ env.S3_BUCKET }}/${{ github.sha }}/index.html" \
             --cache-control "no-cache"
+
+      - name: Invalidate CloudFront
+        run: |
+          # The distribution is owned by infra-frontend; resolve it by alias
+          # (workspace rule: look up shared primitives by name, no remote
+          # state reads). Without this, edges keep serving the previous
+          # sha's index.html until TTL — deploys silently lag.
+          DIST_ID=$(aws cloudfront list-distributions --query \
+            "DistributionList.Items[?Aliases.Items[?@=='display.pfsrd2.521studios.com']].Id | [0]" \
+            --output text)
+          if [ "$DIST_ID" = "None" ] || [ -z "$DIST_ID" ]; then
+            echo "No distribution found for display.pfsrd2.521studios.com" >&2; exit 1
+          fi
+          aws cloudfront create-invalidation --distribution-id "$DIST_ID" \
+            --paths "/" "/index.html"
