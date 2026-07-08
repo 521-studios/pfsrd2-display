@@ -523,6 +523,11 @@ function DetailPanel({ selected, onLoadMonster, initialStack, onInitialStackCons
       {displayedCreature && (
         <>
           <CopyLinkButton />
+          <ReportProblem
+            creature={displayedCreature}
+            schemaVersion={schemaVersion}
+            templateStack={templateStack}
+          />
           {templateStack.length > 0 && (
             <SelectionsPanel
               key={`${templateStack.length}-${templateStack[templateStack.length - 1].template.game_id}`}
@@ -764,6 +769,99 @@ function SelectionsPanel({ entry, baseCreature, onApplySelections, busy }) {
   )
 }
 
+
+// --- Report a Problem ---
+// Files a defect with the full reproduction context pre-filled from the
+// deep-link state (creature + schema + template stack + selections): the
+// released user only types what's wrong. POST /defects (engine contract,
+// wyrd pattern) — accepted defects are replayable by triage.
+function ReportProblem({ creature, schemaVersion, templateStack }) {
+  const [open, setOpen] = useState(false)
+  const [reason, setReason] = useState('')
+  const [flaggedPath, setFlaggedPath] = useState('')
+  const [state, setState] = useState(null) // null | 'sending' | {id} | {error}
+
+  if (!creature) return null
+
+  const submit = async () => {
+    setState('sending')
+    try {
+      const body = JSON.stringify({
+        reason,
+        creature_game_id: creature['game-id'] || creature.game_id,
+        creature_name: creature.name,
+        edition: creature.edition,
+        schema_version: String(schemaVersion || ''),
+        flagged_path: flaggedPath,
+        template_stack: templateStack.map((e) => {
+          const out = { g: e.template.game_id }
+          if (e.selections && e.selections.length > 0) out.s = e.selections
+          return out
+        }),
+      })
+      const bodyHash = Array.from(
+        new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(body)))
+      ).map((b) => b.toString(16).padStart(2, '0')).join('')
+      const res = await fetch(`${API}/defects`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-amz-content-sha256': bodyHash },
+        body,
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || `${res.status}`)
+      setState({ id: data.id })
+      setReason('')
+      setFlaggedPath('')
+    } catch (e) {
+      setState({ error: String(e.message || e) })
+    }
+  }
+
+  return (
+    <div style={styles.reportBox}>
+      <button style={styles.reportButton} onClick={() => { setOpen(!open); setState(null) }}>
+        {open ? 'Cancel report' : 'Report a problem'}
+      </button>
+      {open && (
+        <div style={styles.reportForm}>
+          <div style={styles.selectionNote}>
+            Reporting on <strong>{creature.name}</strong>
+            {templateStack.length > 0
+              ? ` with ${templateStack.map((e) => e.template.name).join(' + ')}`
+              : ''} — the full reproduction context is attached automatically.
+          </div>
+          <textarea
+            style={styles.reportReason}
+            placeholder="What's wrong? (required)"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            rows={3}
+          />
+          <input
+            style={styles.spellSearch}
+            placeholder="which stat/section? (optional)"
+            value={flaggedPath}
+            onChange={(e) => setFlaggedPath(e.target.value)}
+          />
+          <button
+            style={styles.copyLink}
+            disabled={!reason.trim() || state === 'sending'}
+            onClick={submit}
+          >
+            {state === 'sending' ? 'Sending…' : 'Submit report'}
+          </button>
+          {state && state.id && (
+            <div style={{ color: '#7c7' }}>Thanks — filed as {state.id}</div>
+          )}
+          {state && state.error && (
+            <div style={{ color: '#f66' }}>Failed: {state.error}</div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // --- Copy Link ---
 function CopyLinkButton() {
   const [copied, setCopied] = useState(false)
@@ -960,6 +1058,31 @@ const styles = {
     color: '#888',
     cursor: 'pointer',
     marginLeft: 4,
+  },
+  reportBox: { margin: '0 12px' },
+  reportButton: {
+    padding: '3px 12px',
+    background: '#5a2a2a',
+    color: '#edd',
+    border: '1px solid #8a4a4a',
+    borderRadius: 4,
+    cursor: 'pointer',
+    marginTop: 8,
+  },
+  reportForm: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 8,
+    padding: '8px 0',
+    maxWidth: 480,
+  },
+  reportReason: {
+    padding: '6px 8px',
+    background: '#1a1a1f',
+    color: '#ddd',
+    border: '1px solid #555',
+    borderRadius: 4,
+    fontFamily: 'inherit',
   },
   selectionsPanel: {
     margin: '8px 12px',
