@@ -37,9 +37,11 @@ const Senses = (props) => {
         <Modifiers modifiers={perception.modifiers} />{comma(-1, special_senses, "; ")}
         {special_senses ? special_senses.map((ss, i) => {
           return (
-            <SpecialSense specialSense={ss} i={i} key={i} onToggleUMA={toggleUMA}>
-              {comma(i, special_senses)}
-            </SpecialSense>
+            <Changed path={`/stat_block/senses/special_senses/${i}`} key={i}>
+              <SpecialSense specialSense={ss} i={i} onToggleUMA={toggleUMA}>
+                {comma(i, special_senses)}
+              </SpecialSense>
+            </Changed>
           )
         }) : null}
       </div>

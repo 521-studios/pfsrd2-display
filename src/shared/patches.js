@@ -12,9 +12,19 @@
 export function buildChangedPaths(patchGroups, creature) {
   if (!patchGroups || !Array.isArray(patchGroups)) return null
   const paths = new Set()
+  // path -> Set of template names that touched it (stacked templates must
+  // each be named in the hover tooltip)
+  const sources = new Map()
+
+  const attribute = (path, name) => {
+    if (!name) return
+    if (!sources.has(path)) sources.set(path, new Set())
+    sources.get(path).add(name)
+  }
 
   // Track append counts per array path so we can compute indices from the end
   const appendCounts = {}
+  const appendSources = {}
 
   for (const group of patchGroups) {
     if (!group.operations) continue
@@ -26,8 +36,13 @@ export function buildChangedPaths(patchGroups, creature) {
         // all existing items). Instead, count appends and compute indexed paths below.
         const arrayPath = op.path.slice(0, -2)
         appendCounts[arrayPath] = (appendCounts[arrayPath] || 0) + 1
+        if (group.template_name) {
+          appendSources[arrayPath] = appendSources[arrayPath] || new Set()
+          appendSources[arrayPath].add(group.template_name)
+        }
       } else {
         paths.add(op.path)
+        attribute(op.path, group.template_name)
       }
     }
   }
@@ -41,12 +56,33 @@ export function buildChangedPaths(patchGroups, creature) {
         const startIdx = array.length - count
         for (let idx = startIdx; idx < array.length; idx++) {
           paths.add(`${arrayPath}/${idx}`)
+          for (const name of appendSources[arrayPath] || []) {
+            attribute(`${arrayPath}/${idx}`, name)
+          }
         }
       }
     }
   }
 
-  return paths.size > 0 ? paths : null
+  if (paths.size === 0) return null
+  paths.sources = sources
+  return paths
+}
+
+/**
+ * Template names that modified a path (exact or prefix match), for tooltip
+ * attribution. Returns [] when unattributed.
+ */
+export function changeSources(changedPaths, path) {
+  const sources = changedPaths && changedPaths.sources
+  if (!sources || !path) return []
+  const names = new Set()
+  for (const [cp, set] of sources) {
+    if (cp === path || cp.startsWith(path + '/') || path.startsWith(cp + '/')) {
+      for (const n of set) names.add(n)
+    }
+  }
+  return [...names]
 }
 
 /**
