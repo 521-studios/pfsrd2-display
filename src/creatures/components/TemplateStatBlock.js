@@ -53,10 +53,14 @@ const TemplateAbility = ({ ability }) => {
   )
 }
 
-const TemplateChanges = ({ changes }) => {
-  if (!changes || changes.length === 0) return null
-
-  // Separate ability changes from text-only changes
+// Partition a template/family rules object for rendering: text-only change
+// lines (concatenated so list items render as one <ul>), changes carrying
+// their own embedded abilities, and the template-level ability pool
+// (Catfolk's Low-Light Vision lives at mt.abilities, granted by a text-only
+// "Add the following abilities." change — it must render even though no
+// change embeds it).
+export const partitionTemplateRules = (mt) => {
+  const changes = (mt && mt.changes) || []
   const textChanges = []
   const abilityChanges = []
   for (const c of changes) {
@@ -66,17 +70,34 @@ const TemplateChanges = ({ changes }) => {
       textChanges.push(c.text)
     }
   }
+  return {
+    combinedText: textChanges.join('\n'),
+    abilityChanges,
+    poolAbilities: (mt && mt.abilities) || [],
+  }
+}
 
-  // Concatenate text changes into one Markdown block so list items
-  // render as a single <ul> instead of separate <ul>s with gaps
-  const combinedText = textChanges.join('\n')
+const TemplateChanges = ({ combinedText, abilityChanges, poolAbilities }) => {
+  const hasPool = poolAbilities && poolAbilities.length > 0
+  if (!combinedText && abilityChanges.length === 0 && !hasPool) return null
 
   return (
     <div className="Monster__template-changes">
       {combinedText ? <Markdown text={combinedText} /> : null}
+      {hasPool ? (
+        // Template-level ability pool (Catfolk's Low-Light Vision): the
+        // granting instruction is one of the text changes above ("Add the
+        // following abilities."), so the pool renders directly under the
+        // combined text, matching the published layout.
+        <div className="Monster__template-abilities">
+          {poolAbilities.map((a, i) => (
+            <TemplateAbility ability={a} key={i} />
+          ))}
+        </div>
+      ) : null}
       {abilityChanges.map((c, i) => (
         <div key={i} className="Monster__template-change">
-          <Markdown text="- Add the following abilities." />
+          <Markdown text={c.text || '- Add the following abilities.'} />
           <div className="Monster__template-abilities">
             {c.abilities.map((a, j) => (
               <TemplateAbility ability={a} key={j} />
@@ -93,9 +114,11 @@ const TemplateStatBlock = ({ template }) => {
 
   if (!template) return null
 
-  const mt = template.monster_template
-  const changes = mt ? mt.changes || [] : []
+  // Families are the remastered rules carrier for several transforms and
+  // apply through the same endpoint — render their rules identically.
+  const mt = template.monster_template || template.monster_family
   const adjustments = mt ? mt.adjustments || [] : []
+  const rules = partitionTemplateRules(mt)
 
   return (
     <div className="Monster__template">
@@ -110,7 +133,7 @@ const TemplateStatBlock = ({ template }) => {
               <Markdown text={template.text} />
             </div>
           ) : null}
-          <TemplateChanges changes={changes} />
+          <TemplateChanges {...rules} />
           <AdjustmentsTable adjustments={adjustments} />
           {template.sources && template.sources.length > 0 ? (
             <div className="Monster__template-source">
