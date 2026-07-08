@@ -32,7 +32,7 @@ The `dev/` directory is a **reference implementation** for consumers of this lib
 - Apply templates via `POST /templates/apply` with multipart response parsing
 - Stack multiple templates and merge patch documents
 - Pass `patches` prop for change highlighting
-- Filter templates by creature edition
+- Filter templates by creature edition (server-side `applicable_to` — includes cross-type equivalence pairs)
 - Paginate API responses
 - Switch between schema versions
 
@@ -85,7 +85,7 @@ When `patches` is provided (merged `applied_patches` from the template API), mod
 - **Context over props** — `DisplayContext` provides `monsterName`, `onRoll`, `imageBaseUrl`, `changedPaths`. Components use `useDisplay()` / `useIsChanged()`. No prop threading for shared data.
 - **Schema version as float** — API returns `schema_version` as a number (1.4), not a string. `CreatureStatBlock` coerces to string internally.
 - **Patch paths use JSON Pointer** (RFC 6901) — `/stat_block/defense/ac/value`. Append operations use `/-` suffix.
-- **Edition auto-resolution** — the template API automatically resolves edition mismatches (requesting remastered Elite for a legacy creature uses legacy Elite).
+- **Edition auto-resolution** — the template API automatically resolves edition mismatches (requesting remastered Elite for a legacy creature uses legacy Elite). Resolution follows same-type alternates first, then curated cross-type equivalents (a remastered creature given the Book of the Dead vampire *template* gets the Monster Core vampire *family* rules). The picker list uses `applicable_to=<edition>` so paired entries never double-list while unpaired other-edition content stays available.
 
 ## Ported Components
 
