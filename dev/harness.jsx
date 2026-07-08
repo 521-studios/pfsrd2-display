@@ -374,6 +374,40 @@ function DetailPanel({ selected, onLoadMonster, initialStack, onInitialStackCons
     setTemplateStack((prev) => prev.slice(0, -1))
   }, [])
 
+  const [selBusy, setSelBusy] = useState(false)
+  const handleApplySelections = useCallback(async (choices) => {
+    if (templateStack.length === 0) return
+    setSelBusy(true)
+    try {
+      const last = templateStack[templateStack.length - 1]
+      const base = templateStack.length > 1
+        ? templateStack[templateStack.length - 2].creature
+        : originalCreature
+      const applyBody = JSON.stringify({
+        creature: base,
+        template_game_id: last.template.game_id,
+        selections: choices,
+      })
+      const bodyHash = Array.from(
+        new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(applyBody)))
+      ).map((b) => b.toString(16).padStart(2, '0')).join('')
+      const res = await fetch(`${API}/templates/apply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-amz-content-sha256': bodyHash },
+        body: applyBody,
+      })
+      if (!res.ok) throw new Error(`selections apply failed: ${res.status}`)
+      const { patches, creature } = await parseMultipartResponse(res)
+      setTemplateStack((prev) => [
+        ...prev.slice(0, -1),
+        { ...last, patches, creature, selections: choices },
+      ])
+    } catch (e) {
+      console.error('Apply selections failed:', e)
+    }
+    setSelBusy(false)
+  }, [templateStack, originalCreature])
+
   const handleClearAll = useCallback(() => {
     setTemplateStack([])
   }, [])
@@ -489,6 +523,17 @@ function DetailPanel({ selected, onLoadMonster, initialStack, onInitialStackCons
       {displayedCreature && (
         <>
           <CopyLinkButton />
+          {templateStack.length > 0 && (
+            <SelectionsPanel
+              key={`${templateStack.length}-${templateStack[templateStack.length - 1].template.game_id}`}
+              entry={templateStack[templateStack.length - 1]}
+              baseCreature={templateStack.length > 1
+                ? templateStack[templateStack.length - 2].creature
+                : originalCreature}
+              onApplySelections={handleApplySelections}
+              busy={selBusy}
+            />
+          )}
           <TemplateBar
             edition={displayedCreature.edition}
             templateStack={templateStack}
@@ -540,6 +585,184 @@ function DetailPanel({ selected, onLoadMonster, initialStack, onInitialStackCons
   )
 }
 
+
+
+// --- Selections Panel ---
+// Renders the engine's surfaced selections for the LAST applied template
+// (patch doc "selections", engine contract: id + selection {options?,
+// min/max?, description?, constraint?}). Structured selects pick option
+// indices; descriptor selects (Air's spell swap) build client-computed
+// effects: a name-filtered replace of a creature spell with one fetched
+// from the API. Applying re-runs the template with the selections payload.
+function flattenCreatureSpells(creature) {
+  const out = []
+  const oas = creature?.stat_block?.offense?.offensive_actions || []
+  for (const oa of oas) {
+    const lists = oa.spells?.spell_list || []
+    for (const lvl of lists) {
+      for (const sp of lvl.spells || []) {
+        out.push({ name: sp.name, level: lvl.level, level_text: lvl.level_text })
+      }
+    }
+  }
+  return out
+}
+
+function SpellSwapBuilder({ baseCreature, onAdd }) {
+  const [fromSpell, setFromSpell] = useState('')
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState([])
+  const spells = useMemo(() => flattenCreatureSpells(baseCreature), [baseCreature])
+
+  useEffect(() => {
+    if (query.length < 2) { setResults([]); return }
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch(`${API}/search?type=spells&q=${encodeURIComponent(query)}&limit=8`)
+        const data = await res.json()
+        setResults(data.results || [])
+      } catch { setResults([]) }
+    }, 250)
+    return () => clearTimeout(t)
+  }, [query])
+
+  if (spells.length === 0) return <div style={styles.selectionNote}>Creature has no spells to swap.</div>
+
+  return (
+    <div style={styles.spellSwap}>
+      <select style={styles.templateSelect} value={fromSpell} onChange={(e) => setFromSpell(e.target.value)}>
+        <option value="">— spell to replace —</option>
+        {spells.map((sp, i) => (
+          <option key={i} value={sp.name}>{sp.name} ({sp.level_text || sp.level})</option>
+        ))}
+      </select>
+      <input
+        style={styles.spellSearch}
+        placeholder="replacement spell…"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+      />
+      {results.map((r) => (
+        <button
+          key={r.game_id}
+          style={styles.spellResult}
+          onClick={() => {
+            if (!fromSpell) return
+            // name-filtered object replace inside the creature's spell lists
+            onAdd({
+              operation: 'replace',
+              target: `$.offense.offensive_actions[*].spells.spell_list[*].spells[?(@.name=='${fromSpell.replace(/'/g, "\\'")}')]`,
+              value: {
+                name: r.name,
+                subtype: 'spell',
+                type: 'stat_block_section',
+                links: [{ name: r.name, alt: r.name, aonid: r.aonid, 'game-obj': 'Spells', type: 'link' }],
+              },
+            }, `${fromSpell} → ${r.name}`)
+            setFromSpell(''); setQuery(''); setResults([])
+          }}
+        >
+          {r.name}{r.level != null ? ` (rank ${r.level})` : ''}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function SelectionsPanel({ entry, baseCreature, onApplySelections, busy }) {
+  const selections = (entry && entry.patches && entry.patches.selections) || []
+  const [picks, setPicks] = useState({})       // id -> Set(option index)
+  const [swaps, setSwaps] = useState({})       // id -> [{effect, label}]
+  if (selections.length === 0) return null
+
+  const toggle = (id, idx, max) => {
+    setPicks((prev) => {
+      const cur = new Set(prev[id] || [])
+      if (cur.has(idx)) cur.delete(idx)
+      else {
+        if (max && cur.size >= max) return prev
+        cur.add(idx)
+      }
+      return { ...prev, [id]: cur }
+    })
+  }
+
+  const buildChoices = () => {
+    const choices = []
+    for (const sel of selections) {
+      const idxs = [...(picks[sel.id] || [])]
+      const effs = (swaps[sel.id] || []).map((s) => s.effect)
+      if (idxs.length || effs.length) {
+        const c = { id: sel.id }
+        if (idxs.length) c.option_indices = idxs.sort((a, b) => a - b)
+        if (effs.length) c.effects = effs
+        choices.push(c)
+      }
+    }
+    return choices
+  }
+
+  const anyChosen = selections.some((sel) => (picks[sel.id] || new Set()).size > 0 || (swaps[sel.id] || []).length > 0)
+
+  return (
+    <div style={styles.selectionsPanel}>
+      <strong>Selections — {entry.template.name}</strong>
+      {selections.map((sel) => {
+        const opts = sel.selection?.options || []
+        const max = sel.selection?.max
+        const min = sel.selection?.min
+        return (
+          <div key={sel.id} style={styles.selectionBlock}>
+            <div style={styles.selectionDesc}>
+              {sel.selection?.description || sel.selection?.action || sel.change_category}
+              {sel.selection?.constraint ? ` — ${sel.selection.constraint}` : ''}
+              {min || max ? ` (choose ${min === max ? min : `${min || 0}–${max}`})` : ''}
+            </div>
+            {opts.length > 0 ? (
+              opts.map((opt, i) => (
+                <label key={i} style={styles.selectionOption}>
+                  <input
+                    type="checkbox"
+                    checked={(picks[sel.id] || new Set()).has(i)}
+                    onChange={() => toggle(sel.id, i, max)}
+                  />{' '}
+                  {opt.name || (opt.item && opt.item.name) || (opt.effects && opt.effects[0]?.item?.name) || `Option ${i + 1}`}
+                </label>
+              ))
+            ) : (
+              <>
+                <SpellSwapBuilder
+                  baseCreature={baseCreature}
+                  onAdd={(effect, label) =>
+                    setSwaps((prev) => ({ ...prev, [sel.id]: [...(prev[sel.id] || []), { effect, label }] }))
+                  }
+                />
+                {(swaps[sel.id] || []).map((sw, i) => (
+                  <div key={i} style={styles.selectionNote}>
+                    {sw.label}{' '}
+                    <button
+                      style={styles.rollLogClear}
+                      onClick={() => setSwaps((prev) => ({ ...prev, [sel.id]: prev[sel.id].filter((_, j) => j !== i) }))}
+                    >
+                      remove
+                    </button>
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+        )
+      })}
+      <button
+        style={styles.copyLink}
+        disabled={!anyChosen || busy}
+        onClick={() => onApplySelections(buildChoices())}
+      >
+        {busy ? 'Applying…' : 'Apply Selections'}
+      </button>
+    </div>
+  )
+}
 
 // --- Copy Link ---
 function CopyLinkButton() {
@@ -737,6 +960,33 @@ const styles = {
     color: '#888',
     cursor: 'pointer',
     marginLeft: 4,
+  },
+  selectionsPanel: {
+    margin: '8px 12px',
+    padding: '8px 12px',
+    background: '#26212b',
+    border: '1px solid #4a3a5a',
+    borderRadius: 6,
+  },
+  selectionBlock: { margin: '8px 0' },
+  selectionDesc: { color: '#caa', marginBottom: 4 },
+  selectionOption: { display: 'block', margin: '2px 0 2px 12px', cursor: 'pointer' },
+  selectionNote: { color: '#998', margin: '4px 0 4px 12px' },
+  spellSwap: { display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', margin: '4px 0 4px 12px' },
+  spellSearch: {
+    padding: '4px 8px',
+    background: '#1a1a1f',
+    color: '#ddd',
+    border: '1px solid #555',
+    borderRadius: 4,
+  },
+  spellResult: {
+    padding: '2px 10px',
+    background: '#2a4a3a',
+    color: '#dfd',
+    border: '1px solid #4a6a5a',
+    borderRadius: 4,
+    cursor: 'pointer',
   },
   copyLink: {
     alignSelf: 'flex-start',
