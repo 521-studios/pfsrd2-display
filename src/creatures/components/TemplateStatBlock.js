@@ -77,6 +77,26 @@ export const partitionTemplateRules = (mt) => {
   }
 }
 
+const TemplateSections = ({ sections }) => {
+  // Creation-section prose carries instructions that live outside changes
+  // (Experimental Cryptid's "Increase the creature's level by 1 and change
+  // its statistics as follows." sits in the section text before the list).
+  // Render name + text recursively; section ability pools render via the
+  // changes/pool path, not here.
+  if (!sections || sections.length === 0) return null
+  return (
+    <div className="Monster__template-sections">
+      {sections.map((sec, i) => (
+        <div key={i} className="Monster__template-section">
+          {sec.name ? <div className="Monster__section-title">{sec.name}</div> : null}
+          {sec.text ? <Markdown text={sec.text} /> : null}
+          <TemplateSections sections={sec.sections} />
+        </div>
+      ))}
+    </div>
+  )
+}
+
 const TemplateChanges = ({ combinedText, abilityChanges, poolAbilities }) => {
   const hasPool = poolAbilities && poolAbilities.length > 0
   if (!combinedText && abilityChanges.length === 0 && !hasPool) return null
@@ -133,6 +153,7 @@ const TemplateStatBlock = ({ template }) => {
               <Markdown text={template.text} />
             </div>
           ) : null}
+          <TemplateSections sections={template.sections} />
           <TemplateChanges {...rules} />
           <AdjustmentsTable adjustments={adjustments} />
           {template.sources && template.sources.length > 0 ? (
