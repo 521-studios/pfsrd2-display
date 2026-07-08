@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert'
-import { buildChangedPaths, isPathChanged } from './patches.js'
+import { buildChangedPaths, changeSources, isPathChanged } from './patches.js'
 
 describe('buildChangedPaths', () => {
   it('returns null for null input', () => {
@@ -154,5 +154,43 @@ describe('isPathChanged', () => {
     const result = buildChangedPaths(patches, creature)
     // Path doesn't resolve to an array — no indexed paths added, returns null
     assert.strictEqual(result, null)
+  })
+})
+
+describe('changeSources attribution', () => {
+  it('names the template for replace ops and indexed appends', () => {
+    const groups = [
+      {
+        change_category: 'traits',
+        template_name: 'Catfolk',
+        operations: [
+          { op: 'replace', path: '/stat_block/creature_type/creature_types/0', value: 'Catfolk' },
+          { op: 'add', path: '/stat_block/senses/special_senses/-', value: { name: 'Low-Light Vision' } },
+        ],
+      },
+      {
+        change_category: 'level',
+        template_name: 'Elite',
+        operations: [{ op: 'replace', path: '/stat_block/creature_type/level', value: 5 }],
+      },
+    ]
+    const creature = {
+      stat_block: { senses: { special_senses: [{ name: 'darkvision' }, { name: 'Low-Light Vision' }] } },
+    }
+    const paths = buildChangedPaths(groups, creature)
+    assert.ok(paths.has('/stat_block/senses/special_senses/1'))
+    assert.deepStrictEqual(changeSources(paths, '/stat_block/senses/special_senses/1'), ['Catfolk'])
+    assert.deepStrictEqual(changeSources(paths, '/stat_block/creature_type/level'), ['Elite'])
+    // unattributed path -> []
+    assert.deepStrictEqual(changeSources(paths, '/stat_block/defense/ac/value'), [])
+  })
+
+  it('stacked templates touching the same path both attribute', () => {
+    const groups = [
+      { template_name: 'Elite', operations: [{ op: 'replace', path: '/stat_block/defense/ac/value', value: 20 }] },
+      { template_name: 'Ghost', operations: [{ op: 'replace', path: '/stat_block/defense/ac/value', value: 22 }] },
+    ]
+    const paths = buildChangedPaths(groups, null)
+    assert.deepStrictEqual(changeSources(paths, '/stat_block/defense/ac/value').sort(), ['Elite', 'Ghost'])
   })
 })

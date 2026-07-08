@@ -355,7 +355,14 @@ function DetailPanel({ selected, onLoadMonster }) {
     const allGroups = []
     for (const entry of templateStack) {
       if (entry.patches && entry.patches.applied_patches) {
-        allGroups.push(...entry.patches.applied_patches)
+        // carry the source template's name into each group so the display
+        // can attribute changes when templates stack
+        allGroups.push(
+          ...entry.patches.applied_patches.map((g) => ({
+            ...g,
+            template_name: entry.template.name,
+          }))
+        )
       }
     }
     return allGroups.length > 0 ? allGroups : null
@@ -409,6 +416,13 @@ function DetailPanel({ selected, onLoadMonster }) {
       {rolls.length > 0 && (
         <div style={styles.rollLog}>
           <strong>Roll Log</strong>
+          <button
+            style={styles.rollLogClear}
+            onClick={() => setRolls([])}
+            title="Clear the roll log"
+          >
+            Clear
+          </button>
           {rolls.map((r, i) => (
             <div key={r.ts + i} style={styles.rollEntry}>
               <span style={{ color: '#7af' }}>{r.label}</span>
@@ -579,6 +593,15 @@ const styles = {
     color: '#888',
     cursor: 'pointer',
     marginLeft: 4,
+  },
+  rollLogClear: {
+    marginLeft: 12,
+    padding: '2px 10px',
+    background: '#333',
+    color: '#ddd',
+    border: '1px solid #555',
+    borderRadius: 4,
+    cursor: 'pointer',
   },
   rollLog: {
     background: '#1a1a1a',

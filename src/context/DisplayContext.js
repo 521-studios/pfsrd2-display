@@ -1,5 +1,5 @@
 import React, { createContext, useContext } from 'react'
-import { isPathChanged } from '../shared/patches'
+import { changeSources, isPathChanged } from '../shared/patches'
 
 const DisplayContext = createContext({
   onRoll: null,
@@ -22,6 +22,11 @@ export function useDisplay() {
 export function useIsChanged(path) {
   const { changedPaths } = useDisplay()
   return isPathChanged(changedPaths, path)
+}
+
+export function useChangeSources(path) {
+  const { changedPaths } = useDisplay()
+  return changeSources(changedPaths, path)
 }
 
 export default DisplayContext
