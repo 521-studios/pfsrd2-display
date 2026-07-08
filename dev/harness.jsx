@@ -240,7 +240,45 @@ function TemplateBar({ edition, templateStack, onApply, onRemoveLast, onClearAll
 }
 
 // --- Detail Panel ---
-function DetailPanel({ selected, onLoadMonster }) {
+
+// --- Deep links ---
+// Stable URL contract: ?creature=<game_id>&v=<schema_version>&stack=<b64url>
+// where stack encodes [{g: template_game_id, s: [SelectionChoice...]}, ...].
+// The same state feeds "report a problem" reproduction context.
+function encodeStack(templateStack) {
+  const entries = templateStack.map((e) => {
+    const out = { g: e.template.game_id }
+    if (e.selections && e.selections.length > 0) out.s = e.selections
+    return out
+  })
+  const json = JSON.stringify(entries)
+  return btoa(String.fromCharCode(...new TextEncoder().encode(json)))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+}
+
+function decodeStack(param) {
+  try {
+    const b64 = param.replace(/-/g, '+').replace(/_/g, '/')
+    const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))
+    const entries = JSON.parse(new TextDecoder().decode(bytes))
+    return Array.isArray(entries) ? entries : []
+  } catch {
+    return []
+  }
+}
+
+function writeDeepLink(selected, schemaVersion, templateStack) {
+  const params = new URLSearchParams()
+  if (selected) {
+    params.set('creature', selected.game_id)
+    if (schemaVersion) params.set('v', schemaVersion)
+    if (templateStack.length > 0) params.set('stack', encodeStack(templateStack))
+  }
+  const qs = params.toString()
+  window.history.replaceState(null, '', qs ? `?${qs}` : window.location.pathname)
+}
+
+function DetailPanel({ selected, onLoadMonster, initialStack, onInitialStackConsumed }) {
   const [originalCreature, setOriginalCreature] = useState(null)
   const [versions, setVersions] = useState([])
   const [schemaVersion, setSchemaVersion] = useState(null)
@@ -328,7 +366,7 @@ function DetailPanel({ selected, onLoadMonster }) {
 
     setTemplateStack((prev) => [
       ...prev,
-      { template: { game_id: template.game_id, name: template.name }, patches, creature, templateData },
+      { template: { game_id: template.game_id, name: template.name }, patches, creature, templateData, selections: [] },
     ])
   }, [originalCreature, templateStack])
 
@@ -343,6 +381,64 @@ function DetailPanel({ selected, onLoadMonster }) {
   const handleRoll = useCallback((rollData) => {
     setRolls((prev) => [{ ...rollData, ts: Date.now() }, ...prev].slice(0, 20))
   }, [])
+
+  // Restore a deep-linked template stack once the base creature is loaded:
+  // sequential applies, selections included, then a single stack commit.
+  useEffect(() => {
+    if (!initialStack || initialStack.length === 0 || !originalCreature) return
+    let cancelled = false
+    ;(async () => {
+      const stack = []
+      let current = originalCreature
+      for (const entry of initialStack) {
+        try {
+          const applyBody = JSON.stringify({
+            creature: current,
+            template_game_id: entry.g,
+            selections: entry.s || [],
+          })
+          const bodyHash = Array.from(
+            new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(applyBody)))
+          ).map((b) => b.toString(16).padStart(2, '0')).join('')
+          const [applyRes, entryRes] = await Promise.all([
+            fetch(`${API}/templates/apply`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'x-amz-content-sha256': bodyHash },
+              body: applyBody,
+            }),
+            fetch(`${API}/entries/${entry.g}`),
+          ])
+          if (!applyRes.ok) throw new Error(`restore apply failed: ${applyRes.status}`)
+          const { patches, creature } = await parseMultipartResponse(applyRes)
+          const meta = entryRes.ok ? await entryRes.json() : null
+          const name = (meta && meta.entry && meta.entry.name) || entry.g
+          const tplRes = await fetch(`${API}/entries/${entry.g}/full`)
+          const templateData = tplRes.ok ? await tplRes.json() : null
+          stack.push({
+            template: { game_id: entry.g, name },
+            patches,
+            creature,
+            templateData,
+            selections: entry.s || [],
+          })
+          current = creature
+        } catch (e) {
+          console.error('Deep-link restore stopped:', e)
+          break
+        }
+      }
+      if (!cancelled) {
+        setTemplateStack(stack)
+        onInitialStackConsumed && onInitialStackConsumed()
+      }
+    })()
+    return () => { cancelled = true }
+  }, [initialStack, originalCreature])
+
+  // Keep the URL shareable: creature + schema version + template stack.
+  useEffect(() => {
+    writeDeepLink(selected, schemaVersion, templateStack)
+  }, [selected, schemaVersion, templateStack])
 
   // Compute the displayed creature and merged patches
   const displayedCreature = templateStack.length > 0
@@ -392,6 +488,7 @@ function DetailPanel({ selected, onLoadMonster }) {
       {error && <div style={{ ...styles.status, color: '#f55' }}>Error: {error}</div>}
       {displayedCreature && (
         <>
+          <CopyLinkButton />
           <TemplateBar
             edition={displayedCreature.edition}
             templateStack={templateStack}
@@ -443,9 +540,51 @@ function DetailPanel({ selected, onLoadMonster }) {
   )
 }
 
+
+// --- Copy Link ---
+function CopyLinkButton() {
+  const [copied, setCopied] = useState(false)
+  return (
+    <button
+      style={styles.copyLink}
+      title="Copy a shareable link to this creature with its applied templates"
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(window.location.href)
+          setCopied(true)
+          setTimeout(() => setCopied(false), 1500)
+        } catch (e) {
+          console.error('clipboard write failed:', e)
+        }
+      }}
+    >
+      {copied ? 'Copied!' : 'Copy Link'}
+    </button>
+  )
+}
+
 // --- App ---
 function App() {
   const [selected, setSelected] = useState(null)
+  const [initialStack, setInitialStack] = useState(null)
+
+  // Deep-link restore: ?creature=<gid>&v=<schema>&stack=<b64url>
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const gid = params.get('creature')
+    if (!gid) return
+    const stackParam = params.get('stack')
+    if (stackParam) setInitialStack(decodeStack(stackParam))
+    ;(async () => {
+      try {
+        const res = await fetch(`${API}/entries/${gid}`)
+        const data = await res.json()
+        setSelected(data.entry ? data.entry : { game_id: gid, name: gid })
+      } catch {
+        setSelected({ game_id: gid, name: gid })
+      }
+    })()
+  }, [])
 
   const loadMonster = useCallback((gameId) => {
     setSelected({ game_id: gameId, name: gameId })
@@ -454,7 +593,12 @@ function App() {
   return (
     <>
       <SearchPanel onSelect={setSelected} />
-      <DetailPanel selected={selected} onLoadMonster={loadMonster} />
+      <DetailPanel
+        selected={selected}
+        onLoadMonster={loadMonster}
+        initialStack={initialStack}
+        onInitialStackConsumed={() => setInitialStack(null)}
+      />
     </>
   )
 }
@@ -593,6 +737,16 @@ const styles = {
     color: '#888',
     cursor: 'pointer',
     marginLeft: 4,
+  },
+  copyLink: {
+    alignSelf: 'flex-start',
+    margin: '8px 12px 0',
+    padding: '3px 12px',
+    background: '#2a4a6a',
+    color: '#dde',
+    border: '1px solid #4a6a8a',
+    borderRadius: 4,
+    cursor: 'pointer',
   },
   rollLogClear: {
     marginLeft: 12,
