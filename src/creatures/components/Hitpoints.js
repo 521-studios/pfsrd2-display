@@ -77,7 +77,7 @@ const Hitpoints = (props) => {
         {abilities ? <span>
           {abilities.map((a, i) => {
             return (
-              <Changed path={`/stat_block/defense/hitpoints/${hpIndex}/automatic_abilities/${i}`} key={i}>
+              <Changed path={`/stat_block/defense/hitpoints/${hpIndex}/automatic_abilities/${i}`} added key={i}>
                 <InlineAbility ability={a} onToggleUMA={toggleUMA}>{comma(i, abilities)}</InlineAbility>
               </Changed>
             )
