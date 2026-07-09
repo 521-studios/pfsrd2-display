@@ -40,8 +40,9 @@ const Traits = (props) => {
 
 const isRarity = trait => {
   const rarity = ["common", "uncommon", "rare", "unique"]
+  const classes = trait.classes || []
   for (let i = 0; i < rarity.length; i++) {
-    if (trait.classes.includes(rarity[i])) {
+    if (classes.includes(rarity[i])) {
       return rarity[i]
     }
   }
@@ -57,9 +58,13 @@ const traitlist = traits => {
     return []
   }
   traits.forEach(trait => {
-    if (trait.classes.includes('alignment')) {
+    // template-added badges may carry no classes at all — the parser's
+    // remove_empty_fields strips empty arrays (Catfolk badge crashed the
+    // stat block here); classless badges render as general traits
+    const classes = trait.classes || []
+    if (classes.includes('alignment')) {
       alignmentTraits.push(trait)
-    } else if (trait.classes.includes('size')) {
+    } else if (classes.includes('size')) {
       sizeTraits.push({ 'name': trait.name, 'class': 'size', 'trait': trait })
     } else if (isRarity(trait)) {
       rarityTraits.push({ 'name': trait.name, 'class': isRarity(trait), 'trait': trait })
