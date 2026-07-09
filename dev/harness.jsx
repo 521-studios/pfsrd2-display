@@ -728,9 +728,14 @@ function SpellSwapBuilder({ baseCreature, selection, edition, swapped, onAdd }) 
     let cancelled = false
     ;(async () => {
       try {
-        const params = new URLSearchParams({
-          type: 'spells', traits: trait, level: String(rankEntry.searchRank), limit: '100',
-        })
+        // Cantrip slots take cantrips of any printed rank (the index stores
+        // cantrips at their rank, never level 0) — filter by the Cantrip
+        // trait instead of a level. Ranked slots keep the exact-level match.
+        const params = rankEntry.searchRank === 0
+          ? new URLSearchParams({ type: 'spells', traits: `${trait},Cantrip`, limit: '100' })
+          : new URLSearchParams({
+            type: 'spells', traits: trait, level: String(rankEntry.searchRank), limit: '100',
+          })
         if (edition) params.set('edition', edition)
         const res = await fetch(`${API}/search?${params}`)
         const data = await res.json()
