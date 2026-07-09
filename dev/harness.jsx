@@ -670,7 +670,7 @@ function flattenCreatureSpells(creature) {
   for (const oa of oas) {
     const lists = oa.spells?.spell_list || []
     for (const lvl of lists) {
-      const isCantrip = /\(/.test(lvl.level_text || '')
+      const isCantrip = lvl.cantrips === true
       for (const sp of lvl.spells || []) {
         out.push({
           name: sp.name,

@@ -15,8 +15,10 @@ const Offense = (props) => {
       <Speed speed={offense.speed} />
       {(offense.offensive_actions || []).map((oa, i) => {
         if (oa.offensive_action_type === 'attack') {
-          // A template-ADDED Strike (Dwarf's clan dagger) highlights whole;
-          // in-place modifications rely on inner wrappers.
+          // A template-ADDED Strike (Dwarf's clan dagger) highlights whole.
+          // In-place modifications show via inner wrappers on bonus and
+          // damage; attack traits/name/weapon have none yet (tracked in
+          // beads) and render unhighlighted when modified.
           return (
             <Changed path={`/stat_block/offense/offensive_actions/${i}`} block added key={i}>
               <Attack attack={oa.attack} i={i} />
