@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { createRoot } from 'react-dom/client'
 import { CreatureStatBlock } from '../src/index.js'
+import Markdown from '../src/shared/Markdown'
 import '../styles/index.css'
 
 const API = '/api/pfsrd2'
@@ -607,76 +608,149 @@ function DetailPanel({ selected, onLoadMonster, initialStack, onInitialStackCons
 // effects: a name-filtered replace of a creature spell with one fetched
 // from the API. Applying re-runs the template with the selections payload.
 function flattenCreatureSpells(creature) {
+  // Heightened cantrips share the numeric level of their heightening
+  // ("Cantrips (5th)" carries level: 5) — group by level_text so cantrips
+  // form their own rank entry, and searches for their replacements use
+  // rank 0 (cantrip-rank air spells like Gale Blast).
   const out = []
   const oas = creature?.stat_block?.offense?.offensive_actions || []
   for (const oa of oas) {
     const lists = oa.spells?.spell_list || []
     for (const lvl of lists) {
+      const isCantrip = /\(/.test(lvl.level_text || '')
       for (const sp of lvl.spells || []) {
-        out.push({ name: sp.name, level: lvl.level, level_text: lvl.level_text })
+        out.push({
+          name: sp.name,
+          level: lvl.level,
+          level_text: lvl.level_text,
+          group: isCantrip ? `cantrip` : `rank${lvl.level}`,
+          searchRank: isCantrip ? 0 : lvl.level,
+          label: isCantrip ? `Cantrips ${lvl.level_text}` : `Rank ${lvl.level}`,
+        })
       }
     }
   }
   return out
 }
 
-function SpellSwapBuilder({ baseCreature, onAdd }) {
+function SpellSwapBuilder({ baseCreature, selection, edition, onAdd }) {
+  // Published constraint: replace spells with <trait> spells OF THE SAME
+  // RANK ("air spells", "water spells"...). Flow: pick the rank, pick the
+  // creature's spell at that rank (sorted), pick a replacement from the
+  // trait+rank-filtered list (type-to-filter dropdown via datalist).
+  const [rank, setRank] = useState('')
   const [fromSpell, setFromSpell] = useState('')
-  const [query, setQuery] = useState('')
-  const [results, setResults] = useState([])
-  const spells = useMemo(() => flattenCreatureSpells(baseCreature), [baseCreature])
+  const [replacement, setReplacement] = useState('')
+  const [options, setOptions] = useState([])
 
+  const constraintText = `${selection?.description || ''} ${selection?.constraint || ''}`
+  // "If the creature can cast spells, you can replace spells with air
+  // spells of the same rank" — the trait is the LAST "<word> spells"
+  // qualifier ("with air spells"), never the leading "cast spells"
+  const traitMatches = [...constraintText.matchAll(/\bwith ([a-z]+) spells\b|\breplace(?:d)? .*?\bwith ([a-z]+) spells\b/gi)]
+  const rawTrait = traitMatches.length
+    ? (traitMatches[traitMatches.length - 1][1] || traitMatches[traitMatches.length - 1][2])
+    : null
+  const trait = rawTrait ? rawTrait[0].toUpperCase() + rawTrait.slice(1).toLowerCase() : null
+
+  const creatureSpells = useMemo(() => flattenCreatureSpells(baseCreature), [baseCreature])
+  const ranks = useMemo(() => {
+    const seen = new Map()
+    for (const sp of creatureSpells) {
+      if (!seen.has(sp.group)) seen.set(sp.group, { group: sp.group, label: sp.label, searchRank: sp.searchRank })
+    }
+    return [...seen.values()].sort((a, b) => a.searchRank - b.searchRank)
+  }, [creatureSpells])
+  const rankEntry = ranks.find((r) => r.group === rank)
+  const spellsAtRank = useMemo(
+    () => creatureSpells
+      .filter((sp) => sp.group === rank)
+      .sort((a, b) => a.name.localeCompare(b.name)),
+    [creatureSpells, rank]
+  )
+
+  // trait + rank + edition filtered replacement list, sorted by name
   useEffect(() => {
-    if (query.length < 2) { setResults([]); return }
-    const t = setTimeout(async () => {
+    if (!rankEntry || !trait) { setOptions([]); return }
+    let cancelled = false
+    ;(async () => {
       try {
-        const res = await fetch(`${API}/search?type=spells&q=${encodeURIComponent(query)}&limit=8`)
+        const params = new URLSearchParams({
+          type: 'spells', traits: trait, level: String(rankEntry.searchRank), limit: '100',
+        })
+        if (edition) params.set('edition', edition)
+        const res = await fetch(`${API}/search?${params}`)
         const data = await res.json()
-        setResults(data.results || [])
-      } catch { setResults([]) }
-    }, 250)
-    return () => clearTimeout(t)
-  }, [query])
+        if (!cancelled) {
+          setOptions((data.results || []).sort((a, b) => a.name.localeCompare(b.name)))
+        }
+      } catch { if (!cancelled) setOptions([]) }
+    })()
+    return () => { cancelled = true }
+  }, [rankEntry && rankEntry.group, trait, edition])
 
-  if (spells.length === 0) return <div style={styles.selectionNote}>Creature has no spells to swap.</div>
+  if (creatureSpells.length === 0) {
+    return <div style={styles.selectionNote}>Creature has no spells to swap.</div>
+  }
+  if (!trait) {
+    return <div style={styles.selectionNote}>Free-form selection — no trait constraint recognized.</div>
+  }
+
+  const addSwap = () => {
+    const chosen = options.find((o) => o.name.toLowerCase() === replacement.trim().toLowerCase())
+    if (!fromSpell || !chosen) return
+    onAdd({
+      operation: 'replace',
+      target: `$.offense.offensive_actions[*].spells.spell_list[*].spells[?(@.name=='${fromSpell.replace(/'/g, "\\'")}')]`,
+      value: {
+        name: chosen.name.toLowerCase(),
+        subtype: 'spell',
+        type: 'stat_block_section',
+        links: [{
+          name: chosen.name.toLowerCase(), alt: chosen.name.toLowerCase(),
+          aonid: chosen.aonid, 'game-obj': 'Spells', type: 'link',
+        }],
+      },
+    }, `${fromSpell} → ${chosen.name.toLowerCase()} (${rankEntry ? rankEntry.label : rank})`)
+    setFromSpell(''); setReplacement('')
+  }
 
   return (
     <div style={styles.spellSwap}>
-      <select style={styles.templateSelect} value={fromSpell} onChange={(e) => setFromSpell(e.target.value)}>
+      <select style={styles.templateSelect} value={rank}
+        onChange={(e) => { setRank(e.target.value); setFromSpell(''); setReplacement('') }}>
+        <option value="">— rank —</option>
+        {ranks.map((r) => (
+          <option key={r.group} value={r.group}>{r.label}</option>
+        ))}
+      </select>
+      <select style={styles.templateSelect} value={fromSpell} disabled={rank === ''}
+        onChange={(e) => setFromSpell(e.target.value)}>
         <option value="">— spell to replace —</option>
-        {spells.map((sp, i) => (
-          <option key={i} value={sp.name}>{sp.name} ({sp.level_text || sp.level})</option>
+        {spellsAtRank.map((sp, i) => (
+          <option key={i} value={sp.name}>{sp.name}</option>
         ))}
       </select>
       <input
         style={styles.spellSearch}
-        placeholder="replacement spell…"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
+        list="air-spell-options"
+        placeholder={!rankEntry ? 'pick a rank first' : `${trait.toLowerCase()} spells — ${rankEntry.label.toLowerCase()}…`}
+        disabled={rank === ''}
+        value={replacement}
+        onChange={(e) => setReplacement(e.target.value)}
       />
-      {results.map((r) => (
-        <button
-          key={r.game_id}
-          style={styles.spellResult}
-          onClick={() => {
-            if (!fromSpell) return
-            // name-filtered object replace inside the creature's spell lists
-            onAdd({
-              operation: 'replace',
-              target: `$.offense.offensive_actions[*].spells.spell_list[*].spells[?(@.name=='${fromSpell.replace(/'/g, "\\'")}')]`,
-              value: {
-                name: r.name,
-                subtype: 'spell',
-                type: 'stat_block_section',
-                links: [{ name: r.name, alt: r.name, aonid: r.aonid, 'game-obj': 'Spells', type: 'link' }],
-              },
-            }, `${fromSpell} → ${r.name}`)
-            setFromSpell(''); setQuery(''); setResults([])
-          }}
-        >
-          {r.name}{r.level != null ? ` (rank ${r.level})` : ''}
-        </button>
-      ))}
+      <datalist id="air-spell-options">
+        {options.map((o) => (
+          <option key={o.game_id} value={o.name} />
+        ))}
+      </datalist>
+      <button
+        style={styles.spellResult}
+        disabled={!fromSpell || !options.some((o) => o.name.toLowerCase() === replacement.trim().toLowerCase())}
+        onClick={addSwap}
+      >
+        Add swap
+      </button>
     </div>
   )
 }
@@ -726,9 +800,11 @@ function SelectionsPanel({ entry, baseCreature, onApplySelections, busy }) {
         return (
           <div key={sel.id} style={styles.selectionBlock}>
             <div style={styles.selectionDesc}>
-              {sel.selection?.description || sel.selection?.action || sel.change_category}
-              {sel.selection?.constraint ? ` — ${sel.selection.constraint}` : ''}
-              {min || max ? ` (choose ${min === max ? min : `${min || 0}–${max}`})` : ''}
+              <Markdown text={[
+                sel.selection?.description || sel.selection?.action || sel.change_category,
+                sel.selection?.constraint ? `— ${sel.selection.constraint}` : '',
+                min || max ? `*(choose ${min === max ? min : `${min || 0}–${max}`})*` : '',
+              ].filter(Boolean).join(' ')} />
             </div>
             {opts.length > 0 ? (
               opts.map((opt, i) => (
@@ -745,6 +821,8 @@ function SelectionsPanel({ entry, baseCreature, onApplySelections, busy }) {
               <>
                 <SpellSwapBuilder
                   baseCreature={baseCreature}
+                  selection={sel.selection}
+                  edition={baseCreature && baseCreature.edition}
                   onAdd={(effect, label) =>
                     setSwaps((prev) => ({ ...prev, [sel.id]: [...(prev[sel.id] || []), { effect, label }] }))
                   }
