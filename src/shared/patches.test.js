@@ -215,4 +215,14 @@ describe('isPathAdded', () => {
     const paths = new Set(['/stat_block/defense/automatic_abilities'])
     assert.strictEqual(isPathAdded(paths, '/stat_block/defense/automatic_abilities/0'), true)
   })
+
+  it('index prefixes do not collide (/arr/1 vs /arr/10)', () => {
+    const paths = new Set(['/stat_block/offense/offensive_actions/1'])
+    assert.strictEqual(isPathAdded(paths, '/stat_block/offense/offensive_actions/10'), false)
+  })
+
+  it('null inputs are safe', () => {
+    assert.strictEqual(isPathAdded(null, '/x'), false)
+    assert.strictEqual(isPathAdded(new Set(['/x']), null), false)
+  })
 })
