@@ -340,8 +340,15 @@ function DetailPanel({ selected, onLoadMonster, initialStack, onInitialStackCons
     })()
   }, [selected, schemaVersion])
 
+  // While a template apply is in flight the selections panel is frozen:
+  // a pick landing mid-flight would be silently overwritten by a template
+  // push computed from the pre-pick base (and diverge from deep-link replay).
+  const [tmplBusy, setTmplBusy] = useState(false)
   const handleApplyTemplate = useCallback(async (template) => {
     selSeq.current++ // invalidate in-flight selection applies
+    setSelError(null)
+    setTmplBusy(true)
+    try {
     // Use the current creature (last in stack, or original)
     const currentCreature = templateStack.length > 0
       ? templateStack[templateStack.length - 1].creature
@@ -379,10 +386,14 @@ function DetailPanel({ selected, onLoadMonster, initialStack, onInitialStackCons
       ...prev,
       { template: { game_id: template.game_id, name: template.name }, patches, creature, templateData, selections: [] },
     ])
+    } finally {
+      setTmplBusy(false)
+    }
   }, [originalCreature, templateStack])
 
   const handleRemoveLast = useCallback(() => {
     selSeq.current++
+    setSelError(null)
     setTemplateStack((prev) => prev.slice(0, -1))
   }, [])
 
@@ -448,6 +459,7 @@ function DetailPanel({ selected, onLoadMonster, initialStack, onInitialStackCons
 
   const handleClearAll = useCallback(() => {
     selSeq.current++
+    setSelError(null)
     setTemplateStack([])
   }, [])
 
@@ -585,6 +597,7 @@ function DetailPanel({ selected, onLoadMonster, initialStack, onInitialStackCons
               onApplySelections={handleApplySelections}
               busy={selBusy}
               error={selError}
+              frozen={tmplBusy}
             />
           )}
           <TemplateBar
@@ -879,7 +892,7 @@ function SpellCombobox({ options, value, disabled, placeholder, onChange }) {
   )
 }
 
-function SelectionsPanel({ entry, baseCreature, onApplySelections, busy, error }) {
+function SelectionsPanel({ entry, baseCreature, onApplySelections, busy, error, frozen }) {
   const selections = (entry && entry.patches && entry.patches.selections) || []
   const [picks, setPicks] = useState({})       // id -> Set(option index)
   const [swaps, setSwaps] = useState({})       // id -> [{swap, label, from}]
@@ -929,6 +942,7 @@ function SelectionsPanel({ entry, baseCreature, onApplySelections, busy, error }
   }
 
   const toggle = (id, idx, max) => {
+    if (frozen) return
     const cur = new Set(picks[id] || [])
     if (cur.has(idx)) cur.delete(idx)
     else {
@@ -941,12 +955,14 @@ function SelectionsPanel({ entry, baseCreature, onApplySelections, busy, error }
   }
 
   const addSwap = (id, record) => {
+    if (frozen) return
     const next = { ...swaps, [id]: [...(swaps[id] || []), record] }
     setSwaps(next)
     onApplySelections(buildChoicesFrom(picks, next))
   }
 
   const removeSwap = (id, i) => {
+    if (frozen) return
     const next = { ...swaps, [id]: swaps[id].filter((_, j) => j !== i) }
     setSwaps(next)
     onApplySelections(buildChoicesFrom(picks, next))
