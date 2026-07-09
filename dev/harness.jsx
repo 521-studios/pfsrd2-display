@@ -633,7 +633,7 @@ function flattenCreatureSpells(creature) {
   return out
 }
 
-function SpellSwapBuilder({ baseCreature, selection, edition, onAdd }) {
+function SpellSwapBuilder({ baseCreature, selection, edition, swapped, onAdd }) {
   // Published constraint: replace spells with <trait> spells OF THE SAME
   // RANK ("air spells", "water spells"...). Flow: pick the rank, pick the
   // creature's spell at that rank (sorted), pick a replacement from the
@@ -665,8 +665,10 @@ function SpellSwapBuilder({ baseCreature, selection, edition, onAdd }) {
   const spellsAtRank = useMemo(
     () => creatureSpells
       .filter((sp) => sp.group === rank)
+      // a spell already swapped out this round can't be swapped again
+      .filter((sp) => !(swapped || []).includes(sp.name))
       .sort((a, b) => a.name.localeCompare(b.name)),
-    [creatureSpells, rank]
+    [creatureSpells, rank, swapped]
   )
 
   // trait + rank + edition filtered replacement list, sorted by name
@@ -731,19 +733,13 @@ function SpellSwapBuilder({ baseCreature, selection, edition, onAdd }) {
           <option key={i} value={sp.name}>{sp.name}</option>
         ))}
       </select>
-      <input
-        style={styles.spellSearch}
-        list="air-spell-options"
-        placeholder={!rankEntry ? 'pick a rank first' : `${trait.toLowerCase()} spells — ${rankEntry.label.toLowerCase()}…`}
-        disabled={rank === ''}
+      <SpellCombobox
+        options={options}
         value={replacement}
-        onChange={(e) => setReplacement(e.target.value)}
+        disabled={rank === ''}
+        placeholder={!rankEntry ? 'pick a rank first' : `${trait.toLowerCase()} spells — ${rankEntry.label.toLowerCase()}…`}
+        onChange={setReplacement}
       />
-      <datalist id="air-spell-options">
-        {options.map((o) => (
-          <option key={o.game_id} value={o.name} />
-        ))}
-      </datalist>
       <button
         style={styles.spellResult}
         disabled={!fromSpell || !options.some((o) => o.name.toLowerCase() === replacement.trim().toLowerCase())}
@@ -752,6 +748,55 @@ function SpellSwapBuilder({ baseCreature, selection, edition, onAdd }) {
         Add swap
       </button>
     </div>
+  )
+}
+
+
+// Combobox styled like a native select: click/focus opens the full sorted
+// list, typing filters it, click chooses. (The native <datalist> renders
+// inconsistently and gives no dropdown affordance.)
+function SpellCombobox({ options, value, disabled, placeholder, onChange }) {
+  const [open, setOpen] = useState(false)
+  const [filter, setFilter] = useState('')
+  const boxRef = useRef(null)
+
+  useEffect(() => {
+    const close = (e) => {
+      if (boxRef.current && !boxRef.current.contains(e.target)) setOpen(false)
+    }
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [])
+
+  const shown = options.filter((o) =>
+    o.name.toLowerCase().includes((open ? filter : '').toLowerCase()))
+
+  return (
+    <span ref={boxRef} style={styles.comboWrap}>
+      <input
+        style={styles.comboInput}
+        disabled={disabled}
+        placeholder={placeholder}
+        value={open ? filter : value}
+        onFocus={() => { setOpen(true); setFilter('') }}
+        onChange={(e) => { setFilter(e.target.value); setOpen(true) }}
+      />
+      <span style={styles.comboArrow}>▾</span>
+      {open && !disabled && (
+        <div style={styles.comboList}>
+          {shown.length === 0 && <div style={styles.comboEmpty}>no matches</div>}
+          {shown.map((o) => (
+            <div
+              key={o.game_id}
+              style={styles.comboOption}
+              onMouseDown={() => { onChange(o.name); setOpen(false) }}
+            >
+              {o.name}
+            </div>
+          ))}
+        </div>
+      )}
+    </span>
   )
 }
 
@@ -823,6 +868,7 @@ function SelectionsPanel({ entry, baseCreature, onApplySelections, busy }) {
                   baseCreature={baseCreature}
                   selection={sel.selection}
                   edition={baseCreature && baseCreature.edition}
+                  swapped={(swaps[sel.id] || []).map((sw) => sw.label.split(' → ')[0])}
                   onAdd={(effect, label) =>
                     setSwaps((prev) => ({ ...prev, [sel.id]: [...(prev[sel.id] || []), { effect, label }] }))
                   }
@@ -1219,6 +1265,28 @@ const styles = {
   selectionOption: { display: 'block', margin: '2px 0 2px 12px', cursor: 'pointer' },
   selectionNote: { color: '#998', margin: '4px 0 4px 12px' },
   spellSwap: { display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', margin: '4px 0 4px 12px' },
+  comboWrap: { position: 'relative', display: 'inline-block' },
+  comboInput: {
+    padding: '4px 26px 4px 8px',
+    background: '#2a2a30',
+    color: '#ddd',
+    border: '1px solid #555',
+    borderRadius: 4,
+    minWidth: 240,
+    cursor: 'pointer',
+  },
+  comboArrow: {
+    position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
+    pointerEvents: 'none', color: '#999', fontSize: 11,
+  },
+  comboList: {
+    position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 30,
+    maxHeight: 220, overflowY: 'auto',
+    background: '#2a2a30', border: '1px solid #555', borderRadius: 4,
+    boxShadow: '0 4px 12px rgba(0,0,0,.5)',
+  },
+  comboOption: { padding: '5px 10px', cursor: 'pointer', borderBottom: '1px solid #3a3a40' },
+  comboEmpty: { padding: '5px 10px', color: '#888' },
   spellSearch: {
     padding: '4px 8px',
     background: '#1a1a1f',
