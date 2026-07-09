@@ -853,23 +853,15 @@ function SelectionsPanel({ entry, baseCreature, onApplySelections, busy }) {
   const [swaps, setSwaps] = useState({})       // id -> [{effect, label}]
   if (selections.length === 0) return null
 
-  const toggle = (id, idx, max) => {
-    setPicks((prev) => {
-      const cur = new Set(prev[id] || [])
-      if (cur.has(idx)) cur.delete(idx)
-      else {
-        if (max && cur.size >= max) return prev
-        cur.add(idx)
-      }
-      return { ...prev, [id]: cur }
-    })
-  }
-
-  const buildChoices = () => {
+  // Selections apply LIVE: every pick toggle and swap add/remove re-applies
+  // the template immediately, so the stat block always reflects the panel.
+  // (A separate "apply" click proved to be a UX trap — swaps looked added
+  // but the stat block never changed until the extra click.)
+  const buildChoicesFrom = (picksV, swapsV) => {
     const choices = []
     for (const sel of selections) {
-      const idxs = [...(picks[sel.id] || [])]
-      const effs = (swaps[sel.id] || []).map((s) => s.effect)
+      const idxs = [...(picksV[sel.id] || [])]
+      const effs = (swapsV[sel.id] || []).map((s) => s.effect)
       if (idxs.length || effs.length) {
         const c = { id: sel.id }
         if (idxs.length) c.option_indices = idxs.sort((a, b) => a - b)
@@ -880,7 +872,29 @@ function SelectionsPanel({ entry, baseCreature, onApplySelections, busy }) {
     return choices
   }
 
-  const anyChosen = selections.some((sel) => (picks[sel.id] || new Set()).size > 0 || (swaps[sel.id] || []).length > 0)
+  const toggle = (id, idx, max) => {
+    const cur = new Set(picks[id] || [])
+    if (cur.has(idx)) cur.delete(idx)
+    else {
+      if (max && cur.size >= max) return
+      cur.add(idx)
+    }
+    const next = { ...picks, [id]: cur }
+    setPicks(next)
+    onApplySelections(buildChoicesFrom(next, swaps))
+  }
+
+  const addSwap = (id, record) => {
+    const next = { ...swaps, [id]: [...(swaps[id] || []), record] }
+    setSwaps(next)
+    onApplySelections(buildChoicesFrom(picks, next))
+  }
+
+  const removeSwap = (id, i) => {
+    const next = { ...swaps, [id]: swaps[id].filter((_, j) => j !== i) }
+    setSwaps(next)
+    onApplySelections(buildChoicesFrom(picks, next))
+  }
 
   return (
     <div style={styles.selectionsPanel}>
@@ -916,16 +930,14 @@ function SelectionsPanel({ entry, baseCreature, onApplySelections, busy }) {
                   selection={sel.selection}
                   edition={baseCreature && baseCreature.edition}
                   swapped={(swaps[sel.id] || []).map((sw) => sw.from)}
-                  onAdd={(effect, label, from) =>
-                    setSwaps((prev) => ({ ...prev, [sel.id]: [...(prev[sel.id] || []), { effect, label, from }] }))
-                  }
+                  onAdd={(effect, label, from) => addSwap(sel.id, { effect, label, from })}
                 />
                 {(swaps[sel.id] || []).map((sw, i) => (
                   <div key={i} style={styles.selectionNote}>
                     {sw.label}{' '}
                     <button
                       style={styles.rollLogClear}
-                      onClick={() => setSwaps((prev) => ({ ...prev, [sel.id]: prev[sel.id].filter((_, j) => j !== i) }))}
+                      onClick={() => removeSwap(sel.id, i)}
                     >
                       remove
                     </button>
@@ -936,13 +948,7 @@ function SelectionsPanel({ entry, baseCreature, onApplySelections, busy }) {
           </div>
         )
       })}
-      <button
-        style={styles.copyLink}
-        disabled={!anyChosen || busy}
-        onClick={() => onApplySelections(buildChoices())}
-      >
-        {busy ? 'Applying…' : 'Apply Selections'}
-      </button>
+      {busy ? <div style={styles.selectionNote}>Applying…</div> : null}
     </div>
   )
 }
