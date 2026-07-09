@@ -11,7 +11,19 @@ const UMAExpansion = ({ uma }) => {
   return (
     <div className="Monster__uma-expansion">
       {uma.name ? <div className="Monster__uma-expansion-title"><strong className="Monster__ability-name">{uma.name}</strong></div> : null}
+      {uma.frequency ? (
+        <div><strong>Frequency</strong> <Markdown text={uma.frequency} /></div>
+      ) : null}
+      {uma.trigger ? (
+        <div><strong>Trigger</strong> <Markdown text={uma.trigger} /></div>
+      ) : null}
+      {uma.requirement || uma.requirements ? (
+        <div><strong>Requirements</strong> <Markdown text={uma.requirement || uma.requirements} /></div>
+      ) : null}
       {uma.text ? <Markdown text={uma.text} /> : null}
+      {uma.effect ? (
+        <div>{uma.trigger || uma.frequency || uma.requirement || uma.requirements ? <strong>Effect </strong> : null}<Markdown text={uma.effect} /></div>
+      ) : null}
       {uma.critical_success ? (
         <div className="Monster__ability_success">
           <strong>Critical Success</strong> {uma.critical_success}

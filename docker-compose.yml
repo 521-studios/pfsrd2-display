@@ -24,6 +24,7 @@ services:
       - GOPATH=/tmp/go
       - GOCACHE=/tmp/go-cache
       - BUCKET_NAME=521studios-staging-pfsrd2-data
+      - DEFECTS_TABLE=521studios-staging-pfsrd2-defects
       - AWS_PROFILE=521-Staging-Admin
       - WATCHER_INTERVAL=1h
     ports:

@@ -173,8 +173,13 @@ const Ability = (props) => {
     <strong className="Monster__ability-name">{ability.name}</strong>
   )
 
+  // A template-ADDED ability highlights as a block: basePath is the
+  // ability's own indexed path (buildChangedPaths marks appended indices).
+  // Sub-field highlights (saving_throw, damage) still cover in-place
+  // modification of existing abilities.
   return (
-    <div key={i}>
+    <Changed path={basePath} block key={i}>
+    <div>
       {nameEl} {
         renderAction(ability)
       }{
@@ -226,6 +231,7 @@ const Ability = (props) => {
       }
       {umaExpanded ? <UMAExpansion uma={ability.universal_monster_ability} /> : null}
     </div>
+    </Changed>
   )
 }
 

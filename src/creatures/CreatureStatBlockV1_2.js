@@ -50,7 +50,8 @@ const CreatureStatBlockV1_2 = ({ data }) => {
         <div className='Monster__abilities'>
           {stat_block.interaction_abilities.map((ability, i) => {
             return (
-              <Ability ability={ability} i={i} key={i} />
+              <Ability ability={ability} i={i} key={i}
+                basePath={`/stat_block/interaction_abilities/${i}`} />
             )
           })}
         </div>
