@@ -903,28 +903,37 @@ function SpellCombobox({ options, value, disabled, placeholder, onChange }) {
 // Lores typed freely. Commits on Enter or blur.
 const SKILL_SUGGESTIONS = [
   'Arcana', 'Crafting', 'Deception', 'Diplomacy', 'Intimidation', 'Medicine',
-  'Nature', 'Occultism', 'Performance', 'Religion', 'Society',
+  'Nature', 'Occultism', 'Performance', 'Religion', 'Society', 'Survival',
 ]
-function SkillChoiceInput({ value, disabled, onCommit }) {
+function SkillChoiceInput({ id, value, disabled, onCommit }) {
   const [draft, setDraft] = useState(value)
-  useEffect(() => { setDraft(value) }, [value])
+  const draftRef = useRef(value)
+  useEffect(() => { setDraft(value); draftRef.current = value }, [value])
   const commit = () => {
-    const v = draft.trim()
+    const v = draftRef.current.trim()
     if (v !== value) onCommit(v)
   }
+  const listId = `skill-suggestions-${id}`
   return (
     <span>
       <input
         style={styles.comboInput}
-        list="skill-choice-suggestions"
+        list={listId}
         placeholder="skill (e.g. Legal Lore)…"
         disabled={disabled}
         value={draft}
-        onChange={(e) => setDraft(e.target.value)}
+        onChange={(e) => { setDraft(e.target.value); draftRef.current = e.target.value }}
         onBlur={commit}
-        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); commit() } }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault()
+            // Datalist keyboard-select dispatches keydown BEFORE replacing
+            // the value; defer so the input event lands in draftRef first.
+            setTimeout(commit, 0)
+          }
+        }}
       />
-      <datalist id="skill-choice-suggestions">
+      <datalist id={listId}>
         {SKILL_SUGGESTIONS.map((n) => <option key={n} value={n} />)}
       </datalist>
     </span>
@@ -1038,6 +1047,7 @@ function SelectionsPanel({ entry, baseCreature, onApplySelections, busy, error, 
             </div>
             {sel.selection?.action === 'choose_skill' ? (
               <SkillChoiceInput
+                id={sel.id.replace(/\W/g, '-')}
                 value={skills[sel.id] || ''}
                 disabled={frozen}
                 onCommit={(v) => commitSkill(sel.id, v)}
