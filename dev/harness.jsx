@@ -713,7 +713,7 @@ function SpellSwapBuilder({ baseCreature, selection, edition, swapped, onAdd }) 
           aonid: chosen.aonid, 'game-obj': 'Spells', type: 'link',
         }],
       },
-    }, `${fromSpell} → ${chosen.name.toLowerCase()} (${rankEntry ? rankEntry.label : rank})`)
+    }, `${fromSpell} → ${chosen.name.toLowerCase()} (${rankEntry ? rankEntry.label : rank})`, fromSpell)
     setFromSpell(''); setReplacement('')
   }
 
@@ -753,43 +753,90 @@ function SpellSwapBuilder({ baseCreature, selection, edition, swapped, onAdd }) 
 
 
 // Combobox styled like a native select: click/focus opens the full sorted
-// list, typing filters it, click chooses. (The native <datalist> renders
-// inconsistently and gives no dropdown affordance.)
+// list, typing filters it, arrows + Enter or click choose, Escape closes.
+// A typed exact match commits on Enter or when focus leaves. (The native
+// <datalist> renders inconsistently and gives no dropdown affordance.)
 function SpellCombobox({ options, value, disabled, placeholder, onChange }) {
   const [open, setOpen] = useState(false)
   const [filter, setFilter] = useState('')
+  const [active, setActive] = useState(-1)
   const boxRef = useRef(null)
-
-  useEffect(() => {
-    const close = (e) => {
-      if (boxRef.current && !boxRef.current.contains(e.target)) setOpen(false)
-    }
-    document.addEventListener('mousedown', close)
-    return () => document.removeEventListener('mousedown', close)
-  }, [])
 
   const shown = options.filter((o) =>
     o.name.toLowerCase().includes((open ? filter : '').toLowerCase()))
+
+  const commit = (name) => {
+    onChange(name)
+    setOpen(false)
+    setActive(-1)
+  }
+
+  // Closing without an explicit pick keeps a typed exact match
+  const settle = () => {
+    const exact = options.find((o) => o.name.toLowerCase() === filter.trim().toLowerCase())
+    if (exact) onChange(exact.name)
+    setOpen(false)
+    setActive(-1)
+  }
+
+  useEffect(() => {
+    if (!open) return
+    const close = (e) => {
+      if (boxRef.current && !boxRef.current.contains(e.target)) settle()
+    }
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  })
+
+  const onKeyDown = (e) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      if (!open) setOpen(true)
+      else setActive((a) => Math.min(a + 1, shown.length - 1))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setActive((a) => Math.max(a - 1, 0))
+    } else if (e.key === 'Enter') {
+      e.preventDefault()
+      if (open && active >= 0 && shown[active]) commit(shown[active].name)
+      else if (open) settle()
+    } else if (e.key === 'Escape') {
+      setOpen(false)
+      setActive(-1)
+    }
+  }
 
   return (
     <span ref={boxRef} style={styles.comboWrap}>
       <input
         style={styles.comboInput}
+        role="combobox"
+        aria-expanded={open}
+        aria-autocomplete="list"
         disabled={disabled}
         placeholder={placeholder}
         value={open ? filter : value}
-        onFocus={() => { setOpen(true); setFilter('') }}
-        onChange={(e) => { setFilter(e.target.value); setOpen(true) }}
+        onFocus={() => { setOpen(true); setFilter(''); setActive(-1) }}
+        onBlur={(e) => {
+          if (boxRef.current && !boxRef.current.contains(e.relatedTarget)) settle()
+        }}
+        onChange={(e) => { setFilter(e.target.value); setOpen(true); setActive(-1) }}
+        onKeyDown={onKeyDown}
       />
       <span style={styles.comboArrow}>▾</span>
       {open && !disabled && (
-        <div style={styles.comboList}>
+        <div style={styles.comboList} role="listbox">
           {shown.length === 0 && <div style={styles.comboEmpty}>no matches</div>}
-          {shown.map((o) => (
+          {shown.map((o, i) => (
             <div
               key={o.game_id}
-              style={styles.comboOption}
-              onMouseDown={() => { onChange(o.name); setOpen(false) }}
+              role="option"
+              aria-selected={i === active}
+              style={i === active
+                ? { ...styles.comboOption, background: '#3d3d46' }
+                : styles.comboOption}
+              onMouseEnter={() => setActive(i)}
+              onMouseDown={() => commit(o.name)}
             >
               {o.name}
             </div>
@@ -868,9 +915,9 @@ function SelectionsPanel({ entry, baseCreature, onApplySelections, busy }) {
                   baseCreature={baseCreature}
                   selection={sel.selection}
                   edition={baseCreature && baseCreature.edition}
-                  swapped={(swaps[sel.id] || []).map((sw) => sw.label.split(' → ')[0])}
-                  onAdd={(effect, label) =>
-                    setSwaps((prev) => ({ ...prev, [sel.id]: [...(prev[sel.id] || []), { effect, label }] }))
+                  swapped={(swaps[sel.id] || []).map((sw) => sw.from)}
+                  onAdd={(effect, label, from) =>
+                    setSwaps((prev) => ({ ...prev, [sel.id]: [...(prev[sel.id] || []), { effect, label, from }] }))
                   }
                 />
                 {(swaps[sel.id] || []).map((sw, i) => (
