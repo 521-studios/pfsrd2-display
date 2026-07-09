@@ -374,6 +374,7 @@ function DetailPanel({ selected, onLoadMonster, initialStack, onInitialStackCons
     const { patches, creature } = await parseMultipartResponse(applyRes)
     const templateData = templateRes.ok ? await templateRes.json() : null
 
+    selSeq.current++ // invalidate selections applies raced against this push
     setTemplateStack((prev) => [
       ...prev,
       { template: { game_id: template.game_id, name: template.name }, patches, creature, templateData, selections: [] },
@@ -387,9 +388,14 @@ function DetailPanel({ selected, onLoadMonster, initialStack, onInitialStackCons
 
   const [selBusy, setSelBusy] = useState(false)
   const [selError, setSelError] = useState(null)
+  // Busy/error belong to the LATEST selections apply only — selApplyToken
+  // is bumped solely here, so a stale response (invalidated by a stack
+  // mutation) still clears the spinner unless a newer apply owns it.
+  const selApplyToken = useRef(0)
   const handleApplySelections = useCallback(async (choices) => {
     if (templateStack.length === 0) return
     const seq = ++selSeq.current
+    const token = ++selApplyToken.current
     setSelBusy(true)
     setSelError(null)
     try {
@@ -410,7 +416,10 @@ function DetailPanel({ selected, onLoadMonster, initialStack, onInitialStackCons
         headers: { 'Content-Type': 'application/json', 'x-amz-content-sha256': bodyHash },
         body: applyBody,
       })
-      if (seq !== selSeq.current) return
+      if (seq !== selSeq.current) {
+        if (token === selApplyToken.current) setSelBusy(false)
+        return
+      }
       if (!res.ok) {
         let reason = `apply failed: ${res.status}`
         try {
@@ -420,16 +429,21 @@ function DetailPanel({ selected, onLoadMonster, initialStack, onInitialStackCons
         throw new Error(reason)
       }
       const { patches, creature } = await parseMultipartResponse(res)
-      if (seq !== selSeq.current) return
-      setTemplateStack((prev) => [
-        ...prev.slice(0, -1),
-        { ...last, patches, creature, selections: choices },
-      ])
+      if (seq !== selSeq.current) {
+        if (token === selApplyToken.current) setSelBusy(false)
+        return
+      }
+      setTemplateStack((prev) => {
+        // identity guard: if the tail is no longer the entry this apply
+        // started from (template pushed/removed meanwhile), drop the result
+        if (prev.length === 0 || prev[prev.length - 1] !== last) return prev
+        return [...prev.slice(0, -1), { ...last, patches, creature, selections: choices }]
+      })
     } catch (e) {
       console.error('Apply selections failed:', e)
-      if (seq === selSeq.current) setSelError(String(e.message || e))
+      if (seq === selSeq.current && token === selApplyToken.current) setSelError(String(e.message || e))
     }
-    if (seq === selSeq.current) setSelBusy(false)
+    if (token === selApplyToken.current) setSelBusy(false)
   }, [templateStack, originalCreature])
 
   const handleClearAll = useCallback(() => {
