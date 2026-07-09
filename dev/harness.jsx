@@ -897,10 +897,45 @@ function SpellCombobox({ options, value, disabled, placeholder, onChange }) {
   )
 }
 
+
+// Free-form skill input for choose_skill selections (Corrupt's official
+// bully): standard Int/Wis/Cha skills offered as suggestions, arbitrary
+// Lores typed freely. Commits on Enter or blur.
+const SKILL_SUGGESTIONS = [
+  'Arcana', 'Crafting', 'Deception', 'Diplomacy', 'Intimidation', 'Medicine',
+  'Nature', 'Occultism', 'Performance', 'Religion', 'Society',
+]
+function SkillChoiceInput({ value, disabled, onCommit }) {
+  const [draft, setDraft] = useState(value)
+  useEffect(() => { setDraft(value) }, [value])
+  const commit = () => {
+    const v = draft.trim()
+    if (v !== value) onCommit(v)
+  }
+  return (
+    <span>
+      <input
+        style={styles.comboInput}
+        list="skill-choice-suggestions"
+        placeholder="skill (e.g. Legal Lore)…"
+        disabled={disabled}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); commit() } }}
+      />
+      <datalist id="skill-choice-suggestions">
+        {SKILL_SUGGESTIONS.map((n) => <option key={n} value={n} />)}
+      </datalist>
+    </span>
+  )
+}
+
 function SelectionsPanel({ entry, baseCreature, onApplySelections, busy, error, frozen }) {
   const selections = (entry && entry.patches && entry.patches.selections) || []
   const [picks, setPicks] = useState({})       // id -> Set(option index)
   const [swaps, setSwaps] = useState({})       // id -> [{swap, label, from}]
+  const [skills, setSkills] = useState({})     // id -> chosen skill name
 
   // Deep-link restore: the stack entry carries applied selections but the
   // panel starts empty — without rehydration the first live-apply after a
@@ -908,11 +943,12 @@ function SelectionsPanel({ entry, baseCreature, onApplySelections, busy, error, 
   // is empty. Legacy entries carrying raw effects can't be rebuilt into
   // chips; they are left applied and untouched.
   useEffect(() => {
-    if (Object.keys(picks).length || Object.keys(swaps).length) return
+    if (Object.keys(picks).length || Object.keys(swaps).length || Object.keys(skills).length) return
     const restored = entry && entry.selections
     if (!restored || !restored.length) return
     const nextPicks = {}
     const nextSwaps = {}
+    const nextSkills = {}
     for (const c of restored) {
       if (c.option_indices && c.option_indices.length) nextPicks[c.id] = new Set(c.option_indices)
       if (c.spell_swaps && c.spell_swaps.length) {
@@ -920,9 +956,11 @@ function SelectionsPanel({ entry, baseCreature, onApplySelections, busy, error, 
           swap: sw, from: sw.from, label: `${sw.from} → (restored swap)`,
         }))
       }
+      if (c.skill) nextSkills[c.id] = c.skill
     }
     if (Object.keys(nextPicks).length) setPicks(nextPicks)
     if (Object.keys(nextSwaps).length) setSwaps(nextSwaps)
+    if (Object.keys(nextSkills).length) setSkills(nextSkills)
   }, [entry])
 
   if (selections.length === 0) return null
@@ -931,15 +969,17 @@ function SelectionsPanel({ entry, baseCreature, onApplySelections, busy, error, 
   // the template immediately, so the stat block always reflects the panel.
   // (A separate "apply" click proved to be a UX trap — swaps looked added
   // but the stat block never changed until the extra click.)
-  const buildChoicesFrom = (picksV, swapsV) => {
+  const buildChoicesFrom = (picksV, swapsV, skillsV) => {
     const choices = []
     for (const sel of selections) {
       const idxs = [...(picksV[sel.id] || [])]
       const sws = (swapsV[sel.id] || []).map((s) => s.swap)
-      if (idxs.length || sws.length) {
+      const skill = (skillsV[sel.id] || '').trim()
+      if (idxs.length || sws.length || skill) {
         const c = { id: sel.id }
         if (idxs.length) c.option_indices = idxs.sort((a, b) => a - b)
         if (sws.length) c.spell_swaps = sws
+        if (skill) c.skill = skill
         choices.push(c)
       }
     }
@@ -956,21 +996,28 @@ function SelectionsPanel({ entry, baseCreature, onApplySelections, busy, error, 
     }
     const next = { ...picks, [id]: cur }
     setPicks(next)
-    onApplySelections(buildChoicesFrom(next, swaps))
+    onApplySelections(buildChoicesFrom(next, swaps, skills))
   }
 
   const addSwap = (id, record) => {
     if (frozen) return
     const next = { ...swaps, [id]: [...(swaps[id] || []), record] }
     setSwaps(next)
-    onApplySelections(buildChoicesFrom(picks, next))
+    onApplySelections(buildChoicesFrom(picks, next, skills))
   }
 
   const removeSwap = (id, i) => {
     if (frozen) return
     const next = { ...swaps, [id]: swaps[id].filter((_, j) => j !== i) }
     setSwaps(next)
-    onApplySelections(buildChoicesFrom(picks, next))
+    onApplySelections(buildChoicesFrom(picks, next, skills))
+  }
+
+  const commitSkill = (id, value) => {
+    if (frozen) return
+    const next = { ...skills, [id]: value }
+    setSkills(next)
+    onApplySelections(buildChoicesFrom(picks, swaps, next))
   }
 
   return (
@@ -989,7 +1036,13 @@ function SelectionsPanel({ entry, baseCreature, onApplySelections, busy, error, 
                 min || max ? `*(choose ${min === max ? min : `${min || 0}–${max}`})*` : '',
               ].filter(Boolean).join(' ')} />
             </div>
-            {opts.length > 0 ? (
+            {sel.selection?.action === 'choose_skill' ? (
+              <SkillChoiceInput
+                value={skills[sel.id] || ''}
+                disabled={frozen}
+                onCommit={(v) => commitSkill(sel.id, v)}
+              />
+            ) : opts.length > 0 ? (
               opts.map((opt, i) => (
                 <label key={i} style={styles.selectionOption}>
                   <input
