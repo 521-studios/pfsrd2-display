@@ -288,11 +288,18 @@ function DetailPanel({ selected, onLoadMonster, initialStack, onInitialStackCons
   const [rolls, setRolls] = useState([])
   const [templateStack, setTemplateStack] = useState([])
 
+  // Monotonic sequence: only the latest in-flight selections apply may
+  // commit. Stack mutations (template apply/remove, creature or version
+  // change) bump it too, so a late response can never overwrite a newer
+  // stack. Every setTemplateStack reset below bumps this.
+  const selSeq = useRef(0)
+
   // Fetch entry metadata (versions) when selection changes
   useEffect(() => {
     if (!selected) return
     setVersions([])
     setSchemaVersion(null)
+    selSeq.current++
     setTemplateStack([])
     ;(async () => {
       try {
@@ -315,6 +322,7 @@ function DetailPanel({ selected, onLoadMonster, initialStack, onInitialStackCons
     if (!selected || !schemaVersion) return
     setLoading(true)
     setError(null)
+    selSeq.current++
     setTemplateStack([])
     ;(async () => {
       try {
@@ -332,7 +340,15 @@ function DetailPanel({ selected, onLoadMonster, initialStack, onInitialStackCons
     })()
   }, [selected, schemaVersion])
 
+  // While a template apply is in flight the selections panel is frozen:
+  // a pick landing mid-flight would be silently overwritten by a template
+  // push computed from the pre-pick base (and diverge from deep-link replay).
+  const [tmplBusy, setTmplBusy] = useState(false)
   const handleApplyTemplate = useCallback(async (template) => {
+    selSeq.current++ // invalidate in-flight selection applies
+    setSelError(null)
+    setTmplBusy(true)
+    try {
     // Use the current creature (last in stack, or original)
     const currentCreature = templateStack.length > 0
       ? templateStack[templateStack.length - 1].creature
@@ -365,20 +381,34 @@ function DetailPanel({ selected, onLoadMonster, initialStack, onInitialStackCons
     const { patches, creature } = await parseMultipartResponse(applyRes)
     const templateData = templateRes.ok ? await templateRes.json() : null
 
+    selSeq.current++ // invalidate selections applies raced against this push
     setTemplateStack((prev) => [
       ...prev,
       { template: { game_id: template.game_id, name: template.name }, patches, creature, templateData, selections: [] },
     ])
+    } finally {
+      setTmplBusy(false)
+    }
   }, [originalCreature, templateStack])
 
   const handleRemoveLast = useCallback(() => {
+    selSeq.current++
+    setSelError(null)
     setTemplateStack((prev) => prev.slice(0, -1))
   }, [])
 
   const [selBusy, setSelBusy] = useState(false)
+  const [selError, setSelError] = useState(null)
+  // Busy/error belong to the LATEST selections apply only — selApplyToken
+  // is bumped solely here, so a stale response (invalidated by a stack
+  // mutation) still clears the spinner unless a newer apply owns it.
+  const selApplyToken = useRef(0)
   const handleApplySelections = useCallback(async (choices) => {
     if (templateStack.length === 0) return
+    const seq = ++selSeq.current
+    const token = ++selApplyToken.current
     setSelBusy(true)
+    setSelError(null)
     try {
       const last = templateStack[templateStack.length - 1]
       const base = templateStack.length > 1
@@ -397,19 +427,39 @@ function DetailPanel({ selected, onLoadMonster, initialStack, onInitialStackCons
         headers: { 'Content-Type': 'application/json', 'x-amz-content-sha256': bodyHash },
         body: applyBody,
       })
-      if (!res.ok) throw new Error(`selections apply failed: ${res.status}`)
+      if (seq !== selSeq.current) {
+        if (token === selApplyToken.current) setSelBusy(false)
+        return
+      }
+      if (!res.ok) {
+        let reason = `apply failed: ${res.status}`
+        try {
+          const body = await res.json()
+          if (body && body.error) reason = body.error
+        } catch { /* non-JSON error body */ }
+        throw new Error(reason)
+      }
       const { patches, creature } = await parseMultipartResponse(res)
-      setTemplateStack((prev) => [
-        ...prev.slice(0, -1),
-        { ...last, patches, creature, selections: choices },
-      ])
+      if (seq !== selSeq.current) {
+        if (token === selApplyToken.current) setSelBusy(false)
+        return
+      }
+      setTemplateStack((prev) => {
+        // identity guard: if the tail is no longer the entry this apply
+        // started from (template pushed/removed meanwhile), drop the result
+        if (prev.length === 0 || prev[prev.length - 1] !== last) return prev
+        return [...prev.slice(0, -1), { ...last, patches, creature, selections: choices }]
+      })
     } catch (e) {
       console.error('Apply selections failed:', e)
+      if (seq === selSeq.current && token === selApplyToken.current) setSelError(String(e.message || e))
     }
-    setSelBusy(false)
+    if (token === selApplyToken.current) setSelBusy(false)
   }, [templateStack, originalCreature])
 
   const handleClearAll = useCallback(() => {
+    selSeq.current++
+    setSelError(null)
     setTemplateStack([])
   }, [])
 
@@ -463,6 +513,7 @@ function DetailPanel({ selected, onLoadMonster, initialStack, onInitialStackCons
         }
       }
       if (!cancelled) {
+        selSeq.current++
         setTemplateStack(stack)
         onInitialStackConsumed && onInitialStackConsumed()
       }
@@ -545,6 +596,8 @@ function DetailPanel({ selected, onLoadMonster, initialStack, onInitialStackCons
                 : originalCreature}
               onApplySelections={handleApplySelections}
               busy={selBusy}
+              error={selError}
+              frozen={tmplBusy}
             />
           )}
           <TemplateBar
@@ -643,14 +696,12 @@ function SpellSwapBuilder({ baseCreature, selection, edition, swapped, onAdd }) 
   const [replacement, setReplacement] = useState('')
   const [options, setOptions] = useState([])
 
-  const constraintText = `${selection?.description || ''} ${selection?.constraint || ''}`
-  // "If the creature can cast spells, you can replace spells with air
-  // spells of the same rank" — the trait is the LAST "<word> spells"
-  // qualifier ("with air spells"), never the leading "cast spells"
-  const traitMatches = [...constraintText.matchAll(/\bwith ([a-z]+) spells\b|\breplace(?:d)? .*?\bwith ([a-z]+) spells\b/gi)]
-  const rawTrait = traitMatches.length
-    ? (traitMatches[traitMatches.length - 1][1] || traitMatches[traitMatches.length - 1][2])
-    : null
+  // The engine surfaces the swap constraint structurally: selection.constraint
+  // is the required trait ("air"). Older data without the field falls back
+  // to parsing the LAST "with <x> spells" qualifier from the description.
+  const descMatches = [...(selection?.description || '').matchAll(/\bwith ([a-z]+) spells\b/gi)]
+  const rawTrait = selection?.constraint
+    || (descMatches.length ? descMatches[descMatches.length - 1][1] : null)
   const trait = rawTrait ? rawTrait[0].toUpperCase() + rawTrait.slice(1).toLowerCase() : null
 
   const creatureSpells = useMemo(() => flattenCreatureSpells(baseCreature), [baseCreature])
@@ -701,19 +752,13 @@ function SpellSwapBuilder({ baseCreature, selection, edition, swapped, onAdd }) 
   const addSwap = () => {
     const chosen = options.find((o) => o.name.toLowerCase() === replacement.trim().toLowerCase())
     if (!fromSpell || !chosen) return
-    onAdd({
-      operation: 'replace',
-      target: `$.offense.offensive_actions[*].spells.spell_list[*].spells[?(@.name=='${fromSpell.replace(/'/g, "\\'")}')]`,
-      value: {
-        name: chosen.name.toLowerCase(),
-        subtype: 'spell',
-        type: 'stat_block_section',
-        links: [{
-          name: chosen.name.toLowerCase(), alt: chosen.name.toLowerCase(),
-          aonid: chosen.aonid, 'game-obj': 'Spells', type: 'link',
-        }],
-      },
-    }, `${fromSpell} → ${chosen.name.toLowerCase()} (${rankEntry ? rankEntry.label : rank})`, fromSpell)
+    // The engine owns swap semantics: it validates trait + rank and builds
+    // the replacement entry. The client sends only names and ids.
+    onAdd(
+      { from: fromSpell, replacement_game_id: chosen.game_id },
+      `${fromSpell} → ${chosen.name.toLowerCase()} (${rankEntry ? rankEntry.label : rank})`,
+      fromSpell
+    )
     setFromSpell(''); setReplacement('')
   }
 
@@ -847,40 +892,81 @@ function SpellCombobox({ options, value, disabled, placeholder, onChange }) {
   )
 }
 
-function SelectionsPanel({ entry, baseCreature, onApplySelections, busy }) {
+function SelectionsPanel({ entry, baseCreature, onApplySelections, busy, error, frozen }) {
   const selections = (entry && entry.patches && entry.patches.selections) || []
   const [picks, setPicks] = useState({})       // id -> Set(option index)
-  const [swaps, setSwaps] = useState({})       // id -> [{effect, label}]
+  const [swaps, setSwaps] = useState({})       // id -> [{swap, label, from}]
+
+  // Deep-link restore: the stack entry carries applied selections but the
+  // panel starts empty — without rehydration the first live-apply after a
+  // restore would silently wipe them. Seed once per entry when local state
+  // is empty. Legacy entries carrying raw effects can't be rebuilt into
+  // chips; they are left applied and untouched.
+  useEffect(() => {
+    if (Object.keys(picks).length || Object.keys(swaps).length) return
+    const restored = entry && entry.selections
+    if (!restored || !restored.length) return
+    const nextPicks = {}
+    const nextSwaps = {}
+    for (const c of restored) {
+      if (c.option_indices && c.option_indices.length) nextPicks[c.id] = new Set(c.option_indices)
+      if (c.spell_swaps && c.spell_swaps.length) {
+        nextSwaps[c.id] = c.spell_swaps.map((sw) => ({
+          swap: sw, from: sw.from, label: `${sw.from} → (restored swap)`,
+        }))
+      }
+    }
+    if (Object.keys(nextPicks).length) setPicks(nextPicks)
+    if (Object.keys(nextSwaps).length) setSwaps(nextSwaps)
+  }, [entry])
+
   if (selections.length === 0) return null
 
-  const toggle = (id, idx, max) => {
-    setPicks((prev) => {
-      const cur = new Set(prev[id] || [])
-      if (cur.has(idx)) cur.delete(idx)
-      else {
-        if (max && cur.size >= max) return prev
-        cur.add(idx)
-      }
-      return { ...prev, [id]: cur }
-    })
-  }
-
-  const buildChoices = () => {
+  // Selections apply LIVE: every pick toggle and swap add/remove re-applies
+  // the template immediately, so the stat block always reflects the panel.
+  // (A separate "apply" click proved to be a UX trap — swaps looked added
+  // but the stat block never changed until the extra click.)
+  const buildChoicesFrom = (picksV, swapsV) => {
     const choices = []
     for (const sel of selections) {
-      const idxs = [...(picks[sel.id] || [])]
-      const effs = (swaps[sel.id] || []).map((s) => s.effect)
-      if (idxs.length || effs.length) {
+      const idxs = [...(picksV[sel.id] || [])]
+      const sws = (swapsV[sel.id] || []).map((s) => s.swap)
+      if (idxs.length || sws.length) {
         const c = { id: sel.id }
         if (idxs.length) c.option_indices = idxs.sort((a, b) => a - b)
-        if (effs.length) c.effects = effs
+        if (sws.length) c.spell_swaps = sws
         choices.push(c)
       }
     }
     return choices
   }
 
-  const anyChosen = selections.some((sel) => (picks[sel.id] || new Set()).size > 0 || (swaps[sel.id] || []).length > 0)
+  const toggle = (id, idx, max) => {
+    if (frozen) return
+    const cur = new Set(picks[id] || [])
+    if (cur.has(idx)) cur.delete(idx)
+    else {
+      if (max && cur.size >= max) return
+      cur.add(idx)
+    }
+    const next = { ...picks, [id]: cur }
+    setPicks(next)
+    onApplySelections(buildChoicesFrom(next, swaps))
+  }
+
+  const addSwap = (id, record) => {
+    if (frozen) return
+    const next = { ...swaps, [id]: [...(swaps[id] || []), record] }
+    setSwaps(next)
+    onApplySelections(buildChoicesFrom(picks, next))
+  }
+
+  const removeSwap = (id, i) => {
+    if (frozen) return
+    const next = { ...swaps, [id]: swaps[id].filter((_, j) => j !== i) }
+    setSwaps(next)
+    onApplySelections(buildChoicesFrom(picks, next))
+  }
 
   return (
     <div style={styles.selectionsPanel}>
@@ -916,16 +1002,14 @@ function SelectionsPanel({ entry, baseCreature, onApplySelections, busy }) {
                   selection={sel.selection}
                   edition={baseCreature && baseCreature.edition}
                   swapped={(swaps[sel.id] || []).map((sw) => sw.from)}
-                  onAdd={(effect, label, from) =>
-                    setSwaps((prev) => ({ ...prev, [sel.id]: [...(prev[sel.id] || []), { effect, label, from }] }))
-                  }
+                  onAdd={(swap, label, from) => addSwap(sel.id, { swap, label, from })}
                 />
                 {(swaps[sel.id] || []).map((sw, i) => (
                   <div key={i} style={styles.selectionNote}>
                     {sw.label}{' '}
                     <button
                       style={styles.rollLogClear}
-                      onClick={() => setSwaps((prev) => ({ ...prev, [sel.id]: prev[sel.id].filter((_, j) => j !== i) }))}
+                      onClick={() => removeSwap(sel.id, i)}
                     >
                       remove
                     </button>
@@ -936,13 +1020,12 @@ function SelectionsPanel({ entry, baseCreature, onApplySelections, busy }) {
           </div>
         )
       })}
-      <button
-        style={styles.copyLink}
-        disabled={!anyChosen || busy}
-        onClick={() => onApplySelections(buildChoices())}
-      >
-        {busy ? 'Applying…' : 'Apply Selections'}
-      </button>
+      {busy ? <div style={styles.selectionNote}>Applying…</div> : null}
+      {!busy && error ? (
+        <div style={{ ...styles.selectionNote, color: '#e07070' }}>
+          Failed: {error} — the stat block was not changed; remove or fix the offending choice.
+        </div>
+      ) : null}
     </div>
   )
 }
