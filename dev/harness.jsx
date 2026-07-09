@@ -470,7 +470,11 @@ function DetailPanel({ selected, onLoadMonster, initialStack, onInitialStackCons
   }, [initialStack, originalCreature])
 
   // Keep the URL shareable: creature + schema version + template stack.
+  // React runs child effects before parent effects: on first render this
+  // fires (selected=null) BEFORE App's mount effect reads the deep-link
+  // params — never clobber an unconsumed ?creature= URL.
   useEffect(() => {
+    if (!selected && new URLSearchParams(window.location.search).get('creature')) return
     writeDeepLink(selected, schemaVersion, templateStack)
   }, [selected, schemaVersion, templateStack])
 
@@ -522,12 +526,15 @@ function DetailPanel({ selected, onLoadMonster, initialStack, onInitialStackCons
       {error && <div style={{ ...styles.status, color: '#f55' }}>Error: {error}</div>}
       {displayedCreature && (
         <>
-          <CopyLinkButton />
-          <ReportProblem
-            creature={displayedCreature}
-            schemaVersion={schemaVersion}
-            templateStack={templateStack}
-          />
+          <div style={styles.topBar}>
+            <ShareLink href={typeof window !== 'undefined' ? window.location.href : ''} />
+            <ReportProblem
+              creature={displayedCreature}
+              creatureGameId={selected && selected.game_id}
+              schemaVersion={schemaVersion}
+              templateStack={templateStack}
+            />
+          </div>
           {templateStack.length > 0 && (
             <SelectionsPanel
               key={`${templateStack.length}-${templateStack[templateStack.length - 1].template.game_id}`}
@@ -775,7 +782,7 @@ function SelectionsPanel({ entry, baseCreature, onApplySelections, busy }) {
 // deep-link state (creature + schema + template stack + selections): the
 // released user only types what's wrong. POST /defects (engine contract,
 // wyrd pattern) — accepted defects are replayable by triage.
-function ReportProblem({ creature, schemaVersion, templateStack }) {
+function ReportProblem({ creature, creatureGameId, schemaVersion, templateStack }) {
   const [open, setOpen] = useState(false)
   const [reason, setReason] = useState('')
   const [flaggedPath, setFlaggedPath] = useState('')
@@ -788,7 +795,9 @@ function ReportProblem({ creature, schemaVersion, templateStack }) {
     try {
       const body = JSON.stringify({
         reason,
-        creature_game_id: creature['game-id'] || creature.game_id,
+        // entry metadata game_id is always present; the full doc's
+        // "game-id" is a fallback (older schema versions may lack it)
+        creature_game_id: creatureGameId || creature['game-id'] || creature.game_id || '',
         creature_name: creature.name,
         edition: creature.edition,
         schema_version: String(schemaVersion || ''),
@@ -819,7 +828,7 @@ function ReportProblem({ creature, schemaVersion, templateStack }) {
 
   return (
     <div style={styles.reportBox}>
-      <button style={styles.reportButton} onClick={() => { setOpen(!open); setState(null) }}>
+      <button style={{ ...styles.reportButton, marginTop: 0 }} onClick={() => { setOpen(!open); setState(null) }}>
         {open ? 'Cancel report' : 'Report a problem'}
       </button>
       {open && (
@@ -862,25 +871,34 @@ function ReportProblem({ creature, schemaVersion, templateStack }) {
   )
 }
 
-// --- Copy Link ---
-function CopyLinkButton() {
+// --- Share link (GitHub-style: readonly URL input + adjacent copy button) ---
+function ShareLink({ href }) {
   const [copied, setCopied] = useState(false)
   return (
-    <button
-      style={styles.copyLink}
-      title="Copy a shareable link to this creature with its applied templates"
-      onClick={async () => {
-        try {
-          await navigator.clipboard.writeText(window.location.href)
-          setCopied(true)
-          setTimeout(() => setCopied(false), 1500)
-        } catch (e) {
-          console.error('clipboard write failed:', e)
-        }
-      }}
-    >
-      {copied ? 'Copied!' : 'Copy Link'}
-    </button>
+    <span style={styles.shareGroup}>
+      <input
+        style={styles.shareInput}
+        readOnly
+        value={href}
+        onFocus={(e) => e.target.select()}
+        aria-label="Shareable link"
+      />
+      <button
+        style={styles.shareCopy}
+        title="Copy link"
+        onClick={async () => {
+          try {
+            await navigator.clipboard.writeText(href)
+            setCopied(true)
+            setTimeout(() => setCopied(false), 1500)
+          } catch (e) {
+            console.error('clipboard write failed:', e)
+          }
+        }}
+      >
+        {copied ? '✓' : '⧉'}
+      </button>
+    </span>
   )
 }
 
@@ -1059,7 +1077,34 @@ const styles = {
     cursor: 'pointer',
     marginLeft: 4,
   },
-  reportBox: { margin: '0 12px' },
+  reportBox: { display: 'flex', flexDirection: 'column', alignItems: 'flex-end' },
+  topBar: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+    alignItems: 'flex-start',
+    gap: 12,
+    margin: '8px 12px 0',
+  },
+  shareGroup: { display: 'inline-flex', alignItems: 'stretch' },
+  shareInput: {
+    width: 320,
+    padding: '4px 8px',
+    background: '#1a1a1f',
+    color: '#bbb',
+    border: '1px solid #555',
+    borderRight: 'none',
+    borderRadius: '4px 0 0 4px',
+    fontSize: 12,
+    fontFamily: 'monospace',
+  },
+  shareCopy: {
+    padding: '0 10px',
+    background: '#333',
+    color: '#ddd',
+    border: '1px solid #555',
+    borderRadius: '0 4px 4px 0',
+    cursor: 'pointer',
+  },
   reportButton: {
     padding: '3px 12px',
     background: '#5a2a2a',
