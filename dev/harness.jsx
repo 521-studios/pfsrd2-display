@@ -643,14 +643,9 @@ function SpellSwapBuilder({ baseCreature, selection, edition, swapped, onAdd }) 
   const [replacement, setReplacement] = useState('')
   const [options, setOptions] = useState([])
 
-  const constraintText = `${selection?.description || ''} ${selection?.constraint || ''}`
-  // "If the creature can cast spells, you can replace spells with air
-  // spells of the same rank" — the trait is the LAST "<word> spells"
-  // qualifier ("with air spells"), never the leading "cast spells"
-  const traitMatches = [...constraintText.matchAll(/\bwith ([a-z]+) spells\b|\breplace(?:d)? .*?\bwith ([a-z]+) spells\b/gi)]
-  const rawTrait = traitMatches.length
-    ? (traitMatches[traitMatches.length - 1][1] || traitMatches[traitMatches.length - 1][2])
-    : null
+  // The engine surfaces the swap constraint structurally: selection.constraint
+  // is the required trait ("air"). The trait is title-cased for /search.
+  const rawTrait = selection?.constraint || null
   const trait = rawTrait ? rawTrait[0].toUpperCase() + rawTrait.slice(1).toLowerCase() : null
 
   const creatureSpells = useMemo(() => flattenCreatureSpells(baseCreature), [baseCreature])
@@ -701,19 +696,13 @@ function SpellSwapBuilder({ baseCreature, selection, edition, swapped, onAdd }) 
   const addSwap = () => {
     const chosen = options.find((o) => o.name.toLowerCase() === replacement.trim().toLowerCase())
     if (!fromSpell || !chosen) return
-    onAdd({
-      operation: 'replace',
-      target: `$.offense.offensive_actions[*].spells.spell_list[*].spells[?(@.name=='${fromSpell.replace(/'/g, "\\'")}')]`,
-      value: {
-        name: chosen.name.toLowerCase(),
-        subtype: 'spell',
-        type: 'stat_block_section',
-        links: [{
-          name: chosen.name.toLowerCase(), alt: chosen.name.toLowerCase(),
-          aonid: chosen.aonid, 'game-obj': 'Spells', type: 'link',
-        }],
-      },
-    }, `${fromSpell} → ${chosen.name.toLowerCase()} (${rankEntry ? rankEntry.label : rank})`, fromSpell)
+    // The engine owns swap semantics: it validates trait + rank and builds
+    // the replacement entry. The client sends only names and ids.
+    onAdd(
+      { from: fromSpell, replacement_game_id: chosen.game_id },
+      `${fromSpell} → ${chosen.name.toLowerCase()} (${rankEntry ? rankEntry.label : rank})`,
+      fromSpell
+    )
     setFromSpell(''); setReplacement('')
   }
 
@@ -861,11 +850,11 @@ function SelectionsPanel({ entry, baseCreature, onApplySelections, busy }) {
     const choices = []
     for (const sel of selections) {
       const idxs = [...(picksV[sel.id] || [])]
-      const effs = (swapsV[sel.id] || []).map((s) => s.effect)
-      if (idxs.length || effs.length) {
+      const sws = (swapsV[sel.id] || []).map((s) => s.swap)
+      if (idxs.length || sws.length) {
         const c = { id: sel.id }
         if (idxs.length) c.option_indices = idxs.sort((a, b) => a - b)
-        if (effs.length) c.effects = effs
+        if (sws.length) c.spell_swaps = sws
         choices.push(c)
       }
     }
@@ -930,7 +919,7 @@ function SelectionsPanel({ entry, baseCreature, onApplySelections, busy }) {
                   selection={sel.selection}
                   edition={baseCreature && baseCreature.edition}
                   swapped={(swaps[sel.id] || []).map((sw) => sw.from)}
-                  onAdd={(effect, label, from) => addSwap(sel.id, { effect, label, from })}
+                  onAdd={(swap, label, from) => addSwap(sel.id, { swap, label, from })}
                 />
                 {(swaps[sel.id] || []).map((sw, i) => (
                   <div key={i} style={styles.selectionNote}>
