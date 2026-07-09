@@ -100,6 +100,22 @@ function resolvePath(obj, pointer) {
 }
 
 /**
+ * Check if a path was ADDED by a template (the entry itself is new):
+ * exact membership (appended indices, whole-value adds) or a strict
+ * ancestor that was added wholesale (a brand-new array highlights all its
+ * children). Descendant changes deliberately do NOT count — a modified
+ * field inside an existing entry must not mark the whole entry as added.
+ */
+export function isPathAdded(changedPaths, path) {
+  if (!changedPaths || !path) return false
+  if (changedPaths.has(path)) return true
+  for (const cp of changedPaths) {
+    if (path.startsWith(cp + '/')) return true
+  }
+  return false
+}
+
+/**
  * Check if a path was changed.
  * - Exact match
  * - Child of path is changed (e.g. /ac/value changed → /ac is changed)

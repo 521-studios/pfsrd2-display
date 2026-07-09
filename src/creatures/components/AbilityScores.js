@@ -1,5 +1,6 @@
 import React from 'react'
 import RollableText from '../../shared/RollableText'
+import Changed from '../../shared/Changed'
 import { useDisplay } from '../../context/DisplayContext'
 import { capitalize, decoratedNumber } from '../../shared/utils'
 
@@ -20,9 +21,11 @@ const AbilityScores = (props) => {
         return (
           <span key={i} className='Monster__abilityScore'>
             <strong className="Monster__heading">{capitalize(as[0])}</strong>{' '}
-            <RollableText type="d20" label={`${monsterName} ${capitalize(as[0])}`} formula={`1d20${decoratedNumber(as[1])}`}>
-              {decoratedNumber(as[1])}
-            </RollableText>
+            <Changed path={`/stat_block/statistics/${as[0]}`}>
+              <RollableText type="d20" label={`${monsterName} ${capitalize(as[0])}`} formula={`1d20${decoratedNumber(as[1])}`}>
+                {decoratedNumber(as[1])}
+              </RollableText>
+            </Changed>
           </span>
         )
       })}

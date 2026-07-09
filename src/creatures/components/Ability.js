@@ -175,10 +175,16 @@ const Ability = (props) => {
 
   // A template-ADDED ability highlights as a block: basePath is the
   // ability's own indexed path (buildChangedPaths marks appended indices).
-  // Sub-field highlights (saving_throw, damage) still cover in-place
-  // modification of existing abilities.
+  // Sub-field highlights (saving_throw, damage) cover in-place
+  // modification of existing abilities — added-only, so a DC tweak inside
+  // an existing ability doesn't light the whole block.
+  // NOTE: only saving_throw and damage have inner wrappers because those
+  // are the only ability subfields any template modifies in place today.
+  // A future template targeting text/range/area/traits needs a matching
+  // inner Changed wrapper here or the modification renders unhighlighted
+  // (tracked in beads).
   return (
-    <Changed path={basePath} block key={i}>
+    <Changed path={basePath} block added key={i}>
     <div>
       {nameEl} {
         renderAction(ability)

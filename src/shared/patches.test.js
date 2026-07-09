@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert'
-import { buildChangedPaths, changeSources, isPathChanged } from './patches.js'
+import { buildChangedPaths, changeSources, isPathAdded, isPathChanged } from './patches.js'
 
 describe('buildChangedPaths', () => {
   it('returns null for null input', () => {
@@ -192,5 +192,37 @@ describe('changeSources attribution', () => {
     ]
     const paths = buildChangedPaths(groups, null)
     assert.deepStrictEqual(changeSources(paths, '/stat_block/defense/ac/value').sort(), ['Elite', 'Ghost'])
+  })
+})
+
+describe('isPathAdded', () => {
+  it('appended index counts as added, and its children too', () => {
+    const paths = new Set(['/stat_block/offense/offensive_actions/2'])
+    assert.strictEqual(isPathAdded(paths, '/stat_block/offense/offensive_actions/2'), true)
+    assert.strictEqual(isPathAdded(paths, '/stat_block/offense/offensive_actions/2/ability/text'), true)
+  })
+
+  it('modified child does NOT mark the parent entry as added', () => {
+    // Broodpiercer on Stingray: venom DC replaced in place — the whole
+    // ability block must not read as added
+    const paths = new Set(['/stat_block/offense/offensive_actions/1/ability/saving_throw/0/dc'])
+    assert.strictEqual(isPathAdded(paths, '/stat_block/offense/offensive_actions/1'), false)
+    // but isPathChanged still sees the inner field (its own highlight)
+    assert.strictEqual(isPathChanged(paths, '/stat_block/offense/offensive_actions/1/ability/saving_throw/0/dc'), true)
+  })
+
+  it('whole-array add marks every child as added', () => {
+    const paths = new Set(['/stat_block/defense/automatic_abilities'])
+    assert.strictEqual(isPathAdded(paths, '/stat_block/defense/automatic_abilities/0'), true)
+  })
+
+  it('index prefixes do not collide (/arr/1 vs /arr/10)', () => {
+    const paths = new Set(['/stat_block/offense/offensive_actions/1'])
+    assert.strictEqual(isPathAdded(paths, '/stat_block/offense/offensive_actions/10'), false)
+  })
+
+  it('null inputs are safe', () => {
+    assert.strictEqual(isPathAdded(null, '/x'), false)
+    assert.strictEqual(isPathAdded(new Set(['/x']), null), false)
   })
 })
