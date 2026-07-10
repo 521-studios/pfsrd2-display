@@ -785,7 +785,7 @@ function SpellSwapBuilder({ baseCreature, selection, edition, swapped, onAdd }) 
       </select>
       <SpellCombobox
         options={options}
-        value={replacement ? (replacement.source ? `${replacement.name}` : replacement.name) : ''}
+        value={replacement}
         disabled={rank === ''}
         placeholder={!rankEntry ? 'pick a rank first' : `${trait.toLowerCase()} spells — ${rankEntry.label.toLowerCase()}…`}
         onChange={setReplacement}
@@ -837,10 +837,12 @@ function SpellCombobox({ options, value, disabled, placeholder, onChange }) {
   }
 
   // Closing without an explicit pick keeps a typed exact match — only when
-  // it is unambiguous (a duplicated name needs an explicit list pick)
+  // it is unambiguous. A duplicated name keeps the list open so the user
+  // picks a printing instead of silently losing the input.
   const settle = () => {
     const q = filter.trim().toLowerCase()
     const exact = options.filter((o) => o.name.toLowerCase() === q)
+    if (exact.length > 1) return
     if (exact.length === 1) onChange(exact[0])
     setOpen(false)
     setActive(-1)
@@ -882,7 +884,7 @@ function SpellCombobox({ options, value, disabled, placeholder, onChange }) {
         aria-autocomplete="list"
         disabled={disabled}
         placeholder={placeholder}
-        value={open ? filter : value}
+        value={open ? filter : (value ? labelFor(value) : '')}
         onFocus={() => { setOpen(true); setFilter(''); setActive(-1) }}
         onBlur={(e) => {
           if (boxRef.current && !boxRef.current.contains(e.relatedTarget)) settle()
