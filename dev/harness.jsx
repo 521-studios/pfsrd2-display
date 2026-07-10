@@ -693,7 +693,7 @@ function SpellSwapBuilder({ baseCreature, selection, edition, swapped, onAdd }) 
   // trait+rank-filtered list (type-to-filter dropdown via datalist).
   const [rank, setRank] = useState('')
   const [fromSpell, setFromSpell] = useState('')
-  const [replacement, setReplacement] = useState('')
+  const [replacement, setReplacement] = useState(null) // chosen option object
   const [options, setOptions] = useState([])
 
   // The engine surfaces the swap constraint structurally: selection.constraint
@@ -755,7 +755,7 @@ function SpellSwapBuilder({ baseCreature, selection, edition, swapped, onAdd }) 
   }
 
   const addSwap = () => {
-    const chosen = options.find((o) => o.name.toLowerCase() === replacement.trim().toLowerCase())
+    const chosen = replacement
     if (!fromSpell || !chosen) return
     // The engine owns swap semantics: it validates trait + rank and builds
     // the replacement entry. The client sends only names and ids.
@@ -764,13 +764,13 @@ function SpellSwapBuilder({ baseCreature, selection, edition, swapped, onAdd }) 
       `${fromSpell} → ${chosen.name.toLowerCase()} (${rankEntry ? rankEntry.label : rank})`,
       fromSpell
     )
-    setFromSpell(''); setReplacement('')
+    setFromSpell(''); setReplacement(null)
   }
 
   return (
     <div style={styles.spellSwap}>
       <select style={styles.templateSelect} value={rank}
-        onChange={(e) => { setRank(e.target.value); setFromSpell(''); setReplacement('') }}>
+        onChange={(e) => { setRank(e.target.value); setFromSpell(''); setReplacement(null) }}>
         <option value="">— rank —</option>
         {ranks.map((r) => (
           <option key={r.group} value={r.group}>{r.label}</option>
@@ -792,7 +792,7 @@ function SpellSwapBuilder({ baseCreature, selection, edition, swapped, onAdd }) 
       />
       <button
         style={styles.spellResult}
-        disabled={!fromSpell || !options.some((o) => o.name.toLowerCase() === replacement.trim().toLowerCase())}
+        disabled={!fromSpell || !replacement}
         onClick={addSwap}
       >
         Add swap
@@ -815,16 +815,35 @@ function SpellCombobox({ options, value, disabled, placeholder, onChange }) {
   const shown = options.filter((o) =>
     o.name.toLowerCase().includes((open ? filter : '').toLowerCase()))
 
-  const commit = (name) => {
-    onChange(name)
+  // Same-name printings (Arms of Nature in Rage of Elements AND Divine
+  // Mysteries) must be tellable apart and individually selectable: label
+  // duplicates with their source and commit the full option (by game_id).
+  const dupes = new Set()
+  {
+    const seen = new Set()
+    for (const o of options) {
+      const k = o.name.toLowerCase()
+      if (seen.has(k)) dupes.add(k)
+      seen.add(k)
+    }
+  }
+  const labelFor = (o) =>
+    dupes.has(o.name.toLowerCase()) && o.source ? `${o.name} (${o.source})` : o.name
+
+  const commit = (opt) => {
+    onChange(opt)
     setOpen(false)
     setActive(-1)
   }
 
-  // Closing without an explicit pick keeps a typed exact match
+  // Closing without an explicit pick keeps a typed exact match — only when
+  // it is unambiguous. A duplicated name keeps the list open so the user
+  // picks a printing instead of silently losing the input.
   const settle = () => {
-    const exact = options.find((o) => o.name.toLowerCase() === filter.trim().toLowerCase())
-    if (exact) onChange(exact.name)
+    const q = filter.trim().toLowerCase()
+    const exact = options.filter((o) => o.name.toLowerCase() === q)
+    if (exact.length > 1) return
+    if (exact.length === 1) onChange(exact[0])
     setOpen(false)
     setActive(-1)
   }
@@ -848,7 +867,7 @@ function SpellCombobox({ options, value, disabled, placeholder, onChange }) {
       setActive((a) => Math.max(a - 1, 0))
     } else if (e.key === 'Enter') {
       e.preventDefault()
-      if (open && active >= 0 && shown[active]) commit(shown[active].name)
+      if (open && active >= 0 && shown[active]) commit(shown[active])
       else if (open) settle()
     } else if (e.key === 'Escape') {
       setOpen(false)
@@ -865,7 +884,7 @@ function SpellCombobox({ options, value, disabled, placeholder, onChange }) {
         aria-autocomplete="list"
         disabled={disabled}
         placeholder={placeholder}
-        value={open ? filter : value}
+        value={open ? filter : (value ? labelFor(value) : '')}
         onFocus={() => { setOpen(true); setFilter(''); setActive(-1) }}
         onBlur={(e) => {
           if (boxRef.current && !boxRef.current.contains(e.relatedTarget)) settle()
@@ -886,9 +905,9 @@ function SpellCombobox({ options, value, disabled, placeholder, onChange }) {
                 ? { ...styles.comboOption, background: '#3d3d46' }
                 : styles.comboOption}
               onMouseEnter={() => setActive(i)}
-              onMouseDown={() => commit(o.name)}
+              onMouseDown={() => commit(o)}
             >
-              {o.name}
+              {labelFor(o)}
             </div>
           ))}
         </div>
