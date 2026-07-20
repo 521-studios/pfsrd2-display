@@ -65,7 +65,7 @@ import '@521studios/pfsrd2-display/style.css'
   patches={patchGroups}           // optional — from template API, enables highlighting
   onRoll={({ type, label, formula, structuredFormula }) => { /* ... */ }}
   onLoadMonster={(gameId) => { /* ... */ }}
-  imageBaseUrl="/api/pfsrd2/images"
+  imageBaseUrl="/api/pfsrd2/images"  // currently unused — portraits removed pending CUP licensing
 />
 ```
 
@@ -150,7 +150,7 @@ All visual elements use BEM-style class names under `.Monster__*`. Override in y
 | `.Monster__skills` | Skills list |
 | `.Monster__senses` | Perception + special senses |
 | `.Monster__speed` | Speed line |
-| `.MonsterCard` | Portrait card |
+| `.MonsterCard` | Portrait card (currently not rendered — portraits removed pending CUP licensing) |
 
 ## Testing
 
