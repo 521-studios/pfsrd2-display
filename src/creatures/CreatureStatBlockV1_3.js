@@ -11,7 +11,6 @@ import Gear from './components/Gear'
 import Ability from './components/Ability'
 import Defense from './components/Defense'
 import Offense from './components/Offense'
-import MonsterCard from './components/MonsterCard'
 import Sections from './components/Sections'
 import Family from './components/Family'
 import TemplateStatBlock from './components/TemplateStatBlock'
@@ -26,9 +25,6 @@ const CreatureStatBlockV1_3 = ({ data }) => {
 
   return (
     <div className='Monster'>
-      <MonsterCard
-        image={stat_block.image ? stat_block.image.image : null}
-      />
       <div className='Monster__header'>
         <div className='Monster__name'>{data.name}</div>
         <div className='Monster__level'>
