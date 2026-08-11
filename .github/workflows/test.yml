@@ -14,6 +14,7 @@ jobs:
         with:
           node-version: 20
           cache: npm
+      # npm ci runs the prepare script, which builds dist/ — a build failure
+      # fails the install step loudly, and the tests hard-require dist/.
       - run: npm ci
-      - run: npm run build
       - run: npm test
