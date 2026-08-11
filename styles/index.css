@@ -323,9 +323,17 @@
 .Monster__speed,
 .Monster__modifier,
 .Monster__modifiers,
-.Monster__offense {
+.Monster__offense,
+.Monster__price,
+.Monster__bulk {
   margin: 2px 0;
   line-height: 1.3em;
+}
+
+/* ItemCard masked (unidentified) variant */
+.Monster__name--masked {
+  color: #999;
+  font-style: italic;
 }
 
 /* Action icon font */
