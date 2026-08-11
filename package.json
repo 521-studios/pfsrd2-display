@@ -8,6 +8,7 @@
     "dist"
   ],
   "scripts": {
+    "prepare": "npm run build",
     "build": "rollup -c",
     "dev": "vite dev --config dev/vite.config.mjs",
     "build:site": "vite build --config dev/vite.config.prod.mjs",
