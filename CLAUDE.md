@@ -48,7 +48,7 @@ docker compose up
 
 # Build library
 npm run build
-# → dist/index.esm.js, dist/index.cjs.js, dist/style.css
+# → dist/index.esm.js, dist/index.cjs, dist/style.css
 
 # Tests
 npm test

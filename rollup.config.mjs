@@ -8,7 +8,7 @@ export default {
   input: 'src/index.js',
   output: [
     {
-      file: 'dist/index.cjs.js',
+      file: 'dist/index.cjs',
       format: 'cjs',
       sourcemap: true,
       exports: 'named',
@@ -20,6 +20,15 @@ export default {
     },
   ],
   external: ['react', 'react-dom', 'react/jsx-runtime'],
+  // prepare runs this build during consumer installs; rollup treats unresolved
+  // imports and missing exports as warnings (exit 0), which would ship a broken
+  // bundle in a clean-looking install. Promote them to hard failures.
+  onwarn(warning, warn) {
+    if (warning.code === 'UNRESOLVED_IMPORT' || warning.code === 'MISSING_EXPORT') {
+      throw new Error(`${warning.code}: ${warning.message}`)
+    }
+    warn(warning)
+  },
   plugins: [
     resolve(),
     babel({
