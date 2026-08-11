@@ -1,4 +1,5 @@
 import React from 'react'
+import PropTypes from 'prop-types'
 import Traits from '../creatures/components/Traits'
 import Markdown from '../shared/Markdown'
 
@@ -8,6 +9,10 @@ import Markdown from '../shared/Markdown'
 // fetching, no assumption the JSON matches a dataset entry. Rarity isn't a
 // field: it's just one of the trait badges (Traits already classifies
 // common/uncommon/rare/unique via trait.classes), so it renders for free.
+//
+// `masked` hides the item's identity for an unidentified magic item: when
+// true, ONLY `maskLabel` is rendered and none of the real fields reach the
+// DOM (fail closed). `maskLabel` is inert unless `masked` is true.
 const ItemCard = ({ data, masked, maskLabel }) => {
   if (!data) { return null }
 
@@ -38,7 +43,7 @@ const ItemCard = ({ data, masked, maskLabel }) => {
       <hr />
       <Traits traits={traits} />
 
-      {price ? (
+      {price && price.text ? (
         <div className='Monster__price'>
           <strong className="Monster__heading">Price </strong>
           {price.text}
@@ -59,6 +64,12 @@ const ItemCard = ({ data, masked, maskLabel }) => {
       ) : null}
     </div>
   )
+}
+
+ItemCard.propTypes = {
+  data: PropTypes.object.isRequired,
+  masked: PropTypes.bool,
+  maskLabel: PropTypes.string
 }
 
 export default ItemCard
