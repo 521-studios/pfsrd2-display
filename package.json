@@ -10,7 +10,7 @@
       "require": "./dist/index.cjs"
     },
     "./style.css": "./dist/style.css",
-    "./dist/style.css": "./dist/style.css",
+    "./dist/*": "./dist/*",
     "./package.json": "./package.json"
   },
   "files": [
