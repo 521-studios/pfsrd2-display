@@ -31,7 +31,7 @@ The consuming app must provide these itself:
 
 ### CSS
 
-Stat block and card styling ships as a separate stylesheet — import it once
+Stat block styling ships as a separate stylesheet — import it once
 in your app entry point:
 
 ```js
