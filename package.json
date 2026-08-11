@@ -2,8 +2,17 @@
   "name": "@521studios/pfsrd2-display",
   "version": "0.1.0",
   "description": "Reusable PF2e creature stat block renderer for React",
-  "main": "dist/index.cjs.js",
+  "main": "dist/index.cjs",
   "module": "dist/index.esm.js",
+  "exports": {
+    ".": {
+      "import": "./dist/index.esm.js",
+      "require": "./dist/index.cjs"
+    },
+    "./style.css": "./dist/style.css",
+    "./dist/style.css": "./dist/style.css",
+    "./package.json": "./package.json"
+  },
   "files": [
     "dist"
   ],
