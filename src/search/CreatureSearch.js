@@ -21,18 +21,28 @@ export default function CreatureSearch({
   // Monotonic token: only the newest in-flight search may commit its results, so
   // a slow early request can't overwrite a fast later one (out-of-order races).
   const seq = useRef(0)
+  // Hold the latest `search` in a ref so a consumer that passes an UNMEMOIZED
+  // callback doesn't re-run the effect (and re-arm the debounce) every render —
+  // the effect depends on the query, not on the callback's identity.
+  const searchRef = useRef(search)
+  useEffect(() => {
+    searchRef.current = search
+  }, [search])
 
   useEffect(() => {
+    // Bump the token BEFORE the early-return: shortening the query below minChars
+    // must also invalidate any in-flight fetch, else its stale response would
+    // commit results for a query the input no longer shows.
+    const mine = ++seq.current
     if (query.length < minChars) {
       setResults([])
       setLoading(false)
       return
     }
-    const mine = ++seq.current
     setLoading(true)
     const timer = setTimeout(async () => {
       try {
-        const data = await search(query)
+        const data = await searchRef.current(query)
         if (mine === seq.current) setResults(data || [])
       } catch {
         if (mine === seq.current) setResults([])
@@ -41,7 +51,7 @@ export default function CreatureSearch({
       }
     }, debounceMs)
     return () => clearTimeout(timer) // a new keystroke cancels the pending fetch
-  }, [query, minChars, debounceMs, search])
+  }, [query, minChars, debounceMs])
 
   return (
     <div className="CreatureSearch">
