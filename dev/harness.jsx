@@ -117,9 +117,11 @@ function ItemPanel({ onSelect, mode, onModeChange }) {
 function ItemDetail({ item }) {
   const [data, setData] = useState(null)
   const [error, setError] = useState(null)
+  const [variant, setVariant] = useState(0)
 
   useEffect(() => {
     setError(null)
+    setVariant(0) // reset the variant selection when the item changes
     if (!item) {
       setData(null)
       return
@@ -143,7 +145,7 @@ function ItemDetail({ item }) {
     <div style={styles.detailPanel} data-testid="item-detail">
       {!item && <div style={styles.placeholder}>Search for an item…</div>}
       {error && <div style={{ color: '#f55' }}>{error}</div>}
-      {data && <ItemCard data={data} />}
+      {data && <ItemCard data={data} variant={variant} onVariantChange={setVariant} />}
     </div>
   )
 }

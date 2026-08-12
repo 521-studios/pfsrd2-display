@@ -59,3 +59,54 @@ describe('ItemCard unmasked variant (render)', () => {
     assert.doesNotMatch(html, /Price/)
   })
 })
+
+// A Striking rune: one item, three variants each with its own level + price.
+const runeItem = {
+  name: 'Striking',
+  stat_block: {
+    level: 4,
+    price: { text: '65 gp', value: 65 },
+    traits: [{ name: 'Magical', classes: ['trait'] }],
+    text: 'A striking rune stores destructive magic.',
+    variants: [
+      { name: 'Striking', level: 4, price: { text: '65 gp' } },
+      { name: 'Striking (Greater)', level: 12, price: { text: '1,065 gp' } },
+      { name: 'Striking (Major)', level: 19, price: { text: '31,065 gp' } }
+    ]
+  }
+}
+
+describe('ItemCard variants (render)', () => {
+  it('renders a variant selector with one option per variant', () => {
+    const html = renderToStaticMarkup(<ItemCard data={runeItem} onVariantChange={() => {}} />)
+    assert.match(html, /aria-label="variant"/)
+    assert.match(html, /Striking \(Greater\) \(Lvl 12\)/)
+    assert.match(html, /Striking \(Major\) \(Lvl 19\)/)
+  })
+
+  it('shows the base variant (index 0) by default: level 4 / 65 gp', () => {
+    const html = renderToStaticMarkup(<ItemCard data={runeItem} />)
+    assert.match(html, /Item 4/)
+    assert.match(html, /65 gp/)
+    assert.doesNotMatch(html, /31,065 gp/)
+  })
+
+  it('renders the selected variant name/level/price when variant is set', () => {
+    const html = renderToStaticMarkup(<ItemCard data={runeItem} variant={2} onVariantChange={() => {}} />)
+    // header shows the Major variant
+    assert.match(html, /Striking \(Major\)/)
+    assert.match(html, /Item 19/)
+    assert.match(html, /31,065 gp/)
+    assert.doesNotMatch(html, /Item 4</) // not the base level in the header
+  })
+
+  it('has no selector for a plain item (no variants)', () => {
+    const html = renderToStaticMarkup(<ItemCard data={item} />)
+    assert.doesNotMatch(html, /aria-label="variant"/)
+  })
+
+  it('clamps an out-of-range variant index back to the base rather than crashing', () => {
+    const html = renderToStaticMarkup(<ItemCard data={runeItem} variant={99} onVariantChange={() => {}} />)
+    assert.match(html, /Item 4/) // fell back to base
+  })
+})

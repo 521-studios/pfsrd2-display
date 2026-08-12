@@ -505,3 +505,14 @@
   cursor: pointer;
   margin-left: 4px;
 }
+
+/* ItemCard variant selector (e.g. a rune's Striking / Greater / Major). */
+.Monster__variants { margin: 0.25rem 0; }
+.Monster__variant-select {
+  font-size: 0.85rem;
+  padding: 0.15rem 0.3rem;
+  background: #1a1a1a;
+  color: #e0e0e0;
+  border: 1px solid #555;
+  border-radius: 0.25rem;
+}
