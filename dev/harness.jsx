@@ -1,6 +1,16 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { createRoot } from 'react-dom/client'
-import { CreatureStatBlock, CreatureSearch, ItemSearch, ItemCard } from '../src/index.js'
+import {
+  CreatureStatBlock,
+  CreatureSearch,
+  ItemSearch,
+  ItemCard,
+  TemplatePicker,
+  listTemplates,
+  applyTemplate,
+  mergePatches,
+  parseMultipartResponse,
+} from '../src/index.js'
 import Markdown from '../src/shared/Markdown'
 import '../styles/index.css'
 
@@ -22,26 +32,21 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-// --- Multipart response parser ---
-async function parseMultipartResponse(response) {
-  const text = await response.text()
-  const boundary = text.split('\n')[0].trim()
-  const parts = text.split(boundary)
-  let patches = null
-  let creature = null
-
-  for (const part of parts) {
-    if (part.includes('name="patches"')) {
-      const jsonStart = part.indexOf('{')
-      const jsonEnd = part.lastIndexOf('}') + 1
-      patches = JSON.parse(part.substring(jsonStart, jsonEnd))
-    } else if (part.includes('name="creature"')) {
-      const jsonStart = part.indexOf('{')
-      const jsonEnd = part.lastIndexOf('}') + 1
-      creature = JSON.parse(part.substring(jsonStart, jsonEnd))
-    }
-  }
-  return { patches, creature }
+// parseMultipartResponse now comes from the library (used by the selections flow
+// below). The signed POST to /templates/apply is shared by both flows: CloudFront
+// OAC with Lambda Function URLs requires the client to supply x-amz-content-sha256
+// for POSTs (CloudFront does not compute it).
+async function signedApplyPost(body) {
+  const bodyHash = Array.from(
+    new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(body))),
+  )
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('')
+  return fetch(`${API}/templates/apply`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-amz-content-sha256': bodyHash },
+    body,
+  })
 }
 
 // --- Mode Toggle (creatures vs items) ---
@@ -165,45 +170,32 @@ function VersionPicker({ versions, current, onChange }) {
 }
 
 // --- Template Bar ---
+// Reference wiring for the library's TemplatePicker + listTemplates: the harness
+// owns the fetch (a plain GET; applicable_to does the edition filtering
+// server-side), the library owns the list pagination, the picker UI, and (via
+// onApply -> applyTemplate) the apply + patch merge.
 function TemplateBar({ edition, templateStack, onApply, onRemoveLast, onClearAll }) {
-  const [allTemplates, setAllTemplates] = useState([])
+  const [templates, setTemplates] = useState([])
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    (async () => {
+    let cancelled = false
+    ;(async () => {
       try {
-        // applicable_to does the edition filtering server-side: entries of
-        // the creature's edition, plus other-edition entries with no
-        // same-edition counterpart via alternates OR curated equivalents.
-        // Unpaired content (Book of the Dead's Wight) still lists for
-        // remastered creatures; paired content never double-lists. This
-        // replaces client-side name matching, which cannot know about
-        // cross-type equivalence pairs (BotD vampire TEMPLATE paired with
-        // the Monster Core vampire FAMILY).
-        const editionFilter = edition
-          ? `&applicable_to=${encodeURIComponent(edition)}`
-          : ''
-        const pageSize = 20
-        let offset = 0
-        let all = []
-        while (true) {
-          const res = await fetch(
-            `${API}/search?type=monster_templates&limit=${pageSize}&offset=${offset}${editionFilter}`
-          )
-          const data = await res.json()
-          const results = data.results || []
-          all = all.concat(results)
-          if (results.length < pageSize || all.length >= data.total) break
-          offset += pageSize
+        const get = async (path) => {
+          const res = await fetch(`${API}${path}`)
+          return res.json()
         }
-        setAllTemplates(all.sort((a, b) => a.name.localeCompare(b.name)))
+        const all = await listTemplates({ get, edition })
+        if (!cancelled) setTemplates(all)
       } catch (e) {
         console.error('Failed to load templates:', e)
       }
     })()
+    return () => {
+      cancelled = true
+    }
   }, [edition])
-
-  const templates = allTemplates
 
   const handleApply = async (template) => {
     setLoading(true)
@@ -216,46 +208,14 @@ function TemplateBar({ edition, templateStack, onApply, onRemoveLast, onClearAll
   }
 
   return (
-    <div style={styles.templateBar}>
-      <div style={styles.templateRow}>
-        <strong style={{ marginRight: 8 }}>Templates:</strong>
-        <select
-          style={styles.templateSelect}
-          data-testid="template-select"
-          onChange={(e) => {
-            const t = templates.find((t) => t.game_id === e.target.value)
-            if (t) handleApply(t)
-            e.target.value = ''
-          }}
-          disabled={loading}
-          defaultValue=""
-        >
-          <option value="" disabled>
-            {loading ? 'Applying...' : '+ Add template'}
-          </option>
-          {templates.map((t) => (
-            <option key={t.game_id} value={t.game_id}>
-              {t.name}
-            </option>
-          ))}
-        </select>
-      </div>
-      {templateStack.length > 0 && (
-        <div style={styles.templateStack}>
-          {templateStack.map((entry, i) => (
-            <span key={i} style={styles.templateTag}>
-              {entry.template.name}
-              {i === templateStack.length - 1 && (
-                <span style={styles.templateRemove} onClick={onRemoveLast}> ×</span>
-              )}
-            </span>
-          ))}
-          {templateStack.length > 1 && (
-            <span style={styles.templateClearAll} onClick={onClearAll}>Clear all</span>
-          )}
-        </div>
-      )}
-    </div>
+    <TemplatePicker
+      templates={templates}
+      stack={templateStack}
+      onApply={handleApply}
+      onRemoveLast={onRemoveLast}
+      onClearAll={onClearAll}
+      loading={loading}
+    />
   )
 }
 
@@ -373,31 +333,17 @@ function DetailPanel({ selected, onLoadMonster, initialStack, onInitialStackCons
       ? templateStack[templateStack.length - 1].creature
       : originalCreature
 
-    // CloudFront OAC with Lambda Function URLs requires the client to provide
-    // x-amz-content-sha256 for POST requests — CloudFront does not compute it.
-    const applyBody = JSON.stringify({
-      creature: currentCreature,
-      template_game_id: template.game_id,
-    })
-    const bodyHash = Array.from(
-      new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(applyBody)))
-    ).map(b => b.toString(16).padStart(2, '0')).join('')
-
-    // Fetch template application and template full JSON in parallel
-    const [applyRes, templateRes] = await Promise.all([
-      fetch(`${API}/templates/apply`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-amz-content-sha256': bodyHash,
-        },
-        body: applyBody,
+    // Apply via the library (it owns the multipart parse); fetch the template's
+    // full JSON in parallel for the appliedTemplates display. signedApplyPost
+    // adds the OAC x-amz-content-sha256 header the library stays agnostic of.
+    const [{ patches, creature }, templateRes] = await Promise.all([
+      applyTemplate({
+        post: signedApplyPost,
+        creature: currentCreature,
+        templateGameId: template.game_id,
       }),
       fetch(`${API}/entries/${template.game_id}/full`),
     ])
-    if (!applyRes.ok) throw new Error(`Template apply failed: ${applyRes.status}`)
-
-    const { patches, creature } = await parseMultipartResponse(applyRes)
     const templateData = templateRes.ok ? await templateRes.json() : null
 
     selSeq.current++ // invalidate selections applies raced against this push
@@ -438,14 +384,10 @@ function DetailPanel({ selected, onLoadMonster, initialStack, onInitialStackCons
         template_game_id: last.template.game_id,
         selections: choices,
       })
-      const bodyHash = Array.from(
-        new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(applyBody)))
-      ).map((b) => b.toString(16).padStart(2, '0')).join('')
-      const res = await fetch(`${API}/templates/apply`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-amz-content-sha256': bodyHash },
-        body: applyBody,
-      })
+      // Same signed POST as the template-apply flow, but the seq guard must sit
+      // BETWEEN the post and the parse, so this can't use the library's
+      // applyTemplate wholesale — it uses signedApplyPost + parseMultipartResponse.
+      const res = await signedApplyPost(applyBody)
       if (seq !== selSeq.current) {
         if (token === selApplyToken.current) setSelBusy(false)
         return
@@ -496,24 +438,15 @@ function DetailPanel({ selected, onLoadMonster, initialStack, onInitialStackCons
       let current = originalCreature
       for (const entry of initialStack) {
         try {
-          const applyBody = JSON.stringify({
-            creature: current,
-            template_game_id: entry.g,
-            selections: entry.s || [],
-          })
-          const bodyHash = Array.from(
-            new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(applyBody)))
-          ).map((b) => b.toString(16).padStart(2, '0')).join('')
-          const [applyRes, entryRes] = await Promise.all([
-            fetch(`${API}/templates/apply`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'x-amz-content-sha256': bodyHash },
-              body: applyBody,
+          const [{ patches, creature }, entryRes] = await Promise.all([
+            applyTemplate({
+              post: signedApplyPost,
+              creature: current,
+              templateGameId: entry.g,
+              selections: entry.s || [],
             }),
             fetch(`${API}/entries/${entry.g}`),
           ])
-          if (!applyRes.ok) throw new Error(`restore apply failed: ${applyRes.status}`)
-          const { patches, creature } = await parseMultipartResponse(applyRes)
           const meta = entryRes.ok ? await entryRes.json() : null
           const name = (meta && meta.entry && meta.entry.name) || entry.g
           const tplRes = await fetch(`${API}/entries/${entry.g}/full`)
@@ -555,23 +488,7 @@ function DetailPanel({ selected, onLoadMonster, initialStack, onInitialStackCons
     : originalCreature
 
   // Merge all patch operations from the stack into one flat array
-  const mergedPatches = useMemo(() => {
-    if (templateStack.length === 0) return null
-    const allGroups = []
-    for (const entry of templateStack) {
-      if (entry.patches && entry.patches.applied_patches) {
-        // carry the source template's name into each group so the display
-        // can attribute changes when templates stack
-        allGroups.push(
-          ...entry.patches.applied_patches.map((g) => ({
-            ...g,
-            template_name: entry.template.name,
-          }))
-        )
-      }
-    }
-    return allGroups.length > 0 ? allGroups : null
-  }, [templateStack])
+  const mergedPatches = useMemo(() => mergePatches(templateStack), [templateStack])
 
   // Collect template full JSON objects for rendering in the stat block
   const appliedTemplates = useMemo(() => {
@@ -1389,16 +1306,6 @@ const styles = {
     color: '#fff',
     borderColor: '#177ddc',
   },
-  templateBar: {
-    marginBottom: 12,
-    padding: '8px 12px',
-    background: '#2a2a2a',
-    borderRadius: 6,
-  },
-  templateRow: {
-    display: 'flex',
-    alignItems: 'center',
-  },
   templateSelect: {
     padding: '4px 8px',
     border: '1px solid #555',
@@ -1407,34 +1314,6 @@ const styles = {
     color: '#e0e0e0',
     fontSize: 12,
     cursor: 'pointer',
-  },
-  templateStack: {
-    marginTop: 6,
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: 4,
-    alignItems: 'center',
-  },
-  templateTag: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    padding: '2px 8px',
-    background: '#F79639',
-    color: '#1a1a1a',
-    borderRadius: 3,
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  templateRemove: {
-    marginLeft: 4,
-    cursor: 'pointer',
-    fontWeight: 'normal',
-  },
-  templateClearAll: {
-    fontSize: 11,
-    color: '#888',
-    cursor: 'pointer',
-    marginLeft: 4,
   },
   reportBox: { display: 'flex', flexDirection: 'column', alignItems: 'flex-end' },
   topBar: {
