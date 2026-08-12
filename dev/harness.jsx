@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { createRoot } from 'react-dom/client'
-import { CreatureStatBlock } from '../src/index.js'
+import { CreatureStatBlock, CreatureSearch } from '../src/index.js'
 import Markdown from '../src/shared/Markdown'
 import '../styles/index.css'
 
@@ -45,85 +45,24 @@ async function parseMultipartResponse(response) {
 }
 
 // --- Search Panel ---
+// Reference wiring for the library's CreatureSearch: the harness owns the data
+// (the fetch to /search/suggest/unified, querying monsters + npcs), the library
+// owns the UX (debounce, stale-response guard, result rendering + selection).
 function SearchPanel({ onSelect }) {
-  const [query, setQuery] = useState('')
-  const [results, setResults] = useState([])
-  const [loading, setLoading] = useState(false)
-  const timerRef = useRef(null)
-
-  useEffect(() => {
-    if (timerRef.current) clearTimeout(timerRef.current)
-    if (query.length < 2) {
-      setResults([])
-      return
-    }
-    timerRef.current = setTimeout(async () => {
-      setLoading(true)
-      try {
-        const params = new URLSearchParams({ q: query, limit: '15' })
-        params.append('type', 'monsters')
-        params.append('type', 'npcs')
-        const res = await fetch(`${API}/search/suggest/unified?${params}`)
-        const data = await res.json()
-        setResults(data || [])
-      } catch (e) {
-        console.error('Search failed:', e)
-        setResults([])
-      }
-      setLoading(false)
-    }, 250)
-  }, [query])
+  const searchCreatures = useCallback(async (query) => {
+    const params = new URLSearchParams({ q: query, limit: '15' })
+    params.append('type', 'monsters')
+    params.append('type', 'npcs')
+    const res = await fetch(`${API}/search/suggest/unified?${params}`)
+    return res.json()
+  }, [])
 
   return (
     <div style={styles.searchPanel}>
       <div style={styles.searchHeader}>
         <h2 style={{ margin: '0 0 8px' }}>pfsrd2-display</h2>
-        <input
-          type="text"
-          placeholder="Search creatures & NPCs..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          style={styles.searchInput}
-          data-testid="creature-search"
-          autoFocus
-        />
+        <CreatureSearch search={searchCreatures} onSelect={onSelect} />
       </div>
-      <div style={styles.resultsList}>
-        {loading && <div style={styles.status}>Searching...</div>}
-        {!loading && query.length >= 2 && results.length === 0 && (
-          <div style={styles.status}>No results</div>
-        )}
-        {results.map((r) => (
-          <SearchResult key={r.game_id} result={r} onSelect={onSelect} />
-        ))}
-      </div>
-    </div>
-  )
-}
-
-function SearchResult({ result, onSelect }) {
-  return (
-    <div
-      style={styles.resultItem}
-      data-testid="search-result"
-      data-name={result.name}
-      onClick={() => onSelect(result)}
-      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#333')}
-      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-    >
-      <div style={styles.resultName}>{result.name}</div>
-      <div style={styles.resultMeta}>
-        {result.type} {result.level != null ? `· Lvl ${result.level}` : ''}
-        {result.edition ? ` · ${result.edition}` : ''}
-      </div>
-      {result.alternate && (
-        <div
-          style={styles.alternate}
-          onClick={(e) => { e.stopPropagation(); onSelect(result.alternate) }}
-        >
-          ↔ {result.alternate.name} ({result.alternate.edition})
-        </div>
-      )}
     </div>
   )
 }
@@ -1300,39 +1239,6 @@ const styles = {
   searchHeader: {
     padding: 12,
     borderBottom: '1px solid #333',
-  },
-  searchInput: {
-    width: '100%',
-    padding: '8px 12px',
-    border: '1px solid #555',
-    borderRadius: 4,
-    background: '#1a1a1a',
-    color: '#e0e0e0',
-    fontSize: 14,
-    outline: 'none',
-  },
-  resultsList: {
-    flex: 1,
-    overflowY: 'auto',
-  },
-  resultItem: {
-    padding: '8px 12px',
-    cursor: 'pointer',
-    borderBottom: '1px solid #2a2a2a',
-  },
-  resultName: {
-    fontWeight: 'bold',
-  },
-  resultMeta: {
-    fontSize: 12,
-    color: '#888',
-    marginTop: 2,
-  },
-  alternate: {
-    fontSize: 12,
-    color: '#F79639',
-    marginTop: 2,
-    cursor: 'pointer',
   },
   detailPanel: {
     flex: 1,
