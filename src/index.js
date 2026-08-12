@@ -7,5 +7,12 @@ export { default as ItemCard } from './items/ItemCard'
 export { default as Markdown } from './shared/Markdown'
 export { default as CreatureSearch } from './search/CreatureSearch'
 export { default as ItemSearch } from './search/ItemSearch'
+export { default as TemplatePicker } from './templates/TemplatePicker'
+export {
+  parseMultipartResponse,
+  mergePatches,
+  listTemplates,
+  applyTemplate,
+} from './templates/templates'
 export { DisplayProvider, useDisplay, useIsChanged } from './context/DisplayContext'
 export { buildChangedPaths } from './shared/patches'

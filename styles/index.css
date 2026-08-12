@@ -445,3 +445,63 @@
   color: #888;
   font-size: 13px;
 }
+
+/* TemplatePicker — library control for applying/stacking templates.
+   Neutral defaults; consuming apps override .TemplatePicker__* freely. */
+.TemplatePicker {
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: #2a2a2a;
+  border-radius: 6px;
+}
+
+.TemplatePicker__row {
+  display: flex;
+  align-items: center;
+}
+
+.TemplatePicker__label {
+  margin-right: 8px;
+}
+
+.TemplatePicker__select {
+  padding: 4px 8px;
+  border: 1px solid #555;
+  border-radius: 4px;
+  background: #1a1a1a;
+  color: #e0e0e0;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.TemplatePicker__stack {
+  margin-top: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.TemplatePicker__tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  background: #f79639;
+  color: #1a1a1a;
+  border-radius: 3px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.TemplatePicker__remove {
+  margin-left: 4px;
+  cursor: pointer;
+  font-weight: normal;
+}
+
+.TemplatePicker__clear {
+  font-size: 11px;
+  color: #888;
+  cursor: pointer;
+  margin-left: 4px;
+}

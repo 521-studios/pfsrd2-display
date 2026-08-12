@@ -23,6 +23,10 @@ test('ESM entry resolves and exposes named exports', async () => {
   assert.strictEqual(typeof mod.Markdown, 'function', 'Markdown export missing')
   assert.strictEqual(typeof mod.CreatureSearch, 'function', 'CreatureSearch export missing')
   assert.strictEqual(typeof mod.ItemSearch, 'function', 'ItemSearch export missing')
+  assert.strictEqual(typeof mod.TemplatePicker, 'function', 'TemplatePicker export missing')
+  for (const fn of ['parseMultipartResponse', 'mergePatches', 'listTemplates', 'applyTemplate']) {
+    assert.strictEqual(typeof mod[fn], 'function', `${fn} export missing`)
+  }
 })
 
 test('CJS entry resolves and exposes named exports', () => {
@@ -32,6 +36,10 @@ test('CJS entry resolves and exposes named exports', () => {
   assert.strictEqual(typeof mod.Markdown, 'function', 'Markdown export missing')
   assert.strictEqual(typeof mod.CreatureSearch, 'function', 'CreatureSearch export missing')
   assert.strictEqual(typeof mod.ItemSearch, 'function', 'ItemSearch export missing')
+  assert.strictEqual(typeof mod.TemplatePicker, 'function', 'TemplatePicker export missing')
+  for (const fn of ['parseMultipartResponse', 'mergePatches', 'listTemplates', 'applyTemplate']) {
+    assert.strictEqual(typeof mod[fn], 'function', `${fn} export missing`)
+  }
 })
 
 test('subpaths resolve per the exports map AND exist on disk', () => {
