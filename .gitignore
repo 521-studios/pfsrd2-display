@@ -3,3 +3,7 @@ dist/
 dist-site/
 .DS_Store
 .env
+
+# Playwright e2e
+playwright-report/
+test-results/
