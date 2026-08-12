@@ -20,8 +20,12 @@ export default defineConfig({
       allow: [path.resolve(__dirname, '..')],
     },
     proxy: {
+      // Defaults to the docker-compose API service. Override HARNESS_API_TARGET
+      // to point the harness at another backend — e.g. the deployed staging
+      // edge (https://display.pfsrd2.staging.521studios.com) when running the
+      // e2e suite locally without docker.
       '/api/pfsrd2': {
-        target: 'http://pfsrd2-api:8090',
+        target: process.env.HARNESS_API_TARGET || 'http://pfsrd2-api:8090',
         changeOrigin: true,
       },
     },
