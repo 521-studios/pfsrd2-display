@@ -1,11 +1,14 @@
-import React from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import PropTypes from 'prop-types'
-import useTypeahead from './useTypeahead.js'
 
-// TypeAhead is the shared type-ahead UI behind CreatureSearch and ItemSearch —
-// both search the same suggest endpoint and get the same result shape
-// ({game_id, name, type, level, edition, alternate?}), so they differ only in
-// BEM block name, test ids, and placeholder. Not exported; use the presets.
+// TypeAhead is the shared type-ahead behind CreatureSearch and ItemSearch — both
+// search the same suggest endpoint and get the same result shape ({game_id, name,
+// type, level, edition, alternate?}), so they differ only in BEM block name, test
+// ids, and placeholder. Not exported; use the presets.
+//
+// The library owns the timing (debounce + a monotonic stale-response guard); the
+// CONSUMER owns the data via `search(query) => Promise<results[]>` (auth, URL,
+// which types). This is the one correct copy of the tricky async-ordering logic.
 export default function TypeAhead({
   search,
   onSelect,
@@ -16,7 +19,42 @@ export default function TypeAhead({
   minChars = 2,
   debounceMs = 250,
 }) {
-  const { query, setQuery, results, loading } = useTypeahead({ search, minChars, debounceMs })
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState([])
+  const [loading, setLoading] = useState(false)
+  // Only the newest in-flight search may commit, so a slow early request can't
+  // overwrite a fast later one (out-of-order races).
+  const seq = useRef(0)
+  // Hold the latest `search` in a ref so an unmemoized callback prop doesn't
+  // re-run the effect (re-arming the debounce) on every consumer render.
+  const searchRef = useRef(search)
+  useEffect(() => {
+    searchRef.current = search
+  }, [search])
+
+  useEffect(() => {
+    // Bump the token BEFORE the early-return: shortening the query below minChars
+    // must also invalidate any in-flight fetch, else its stale response would
+    // commit results for a query the input no longer shows.
+    const mine = ++seq.current
+    if (query.length < minChars) {
+      setResults([])
+      setLoading(false)
+      return
+    }
+    setLoading(true)
+    const timer = setTimeout(async () => {
+      try {
+        const data = await searchRef.current(query)
+        if (mine === seq.current) setResults(data || [])
+      } catch {
+        if (mine === seq.current) setResults([])
+      } finally {
+        if (mine === seq.current) setLoading(false)
+      }
+    }, debounceMs)
+    return () => clearTimeout(timer) // a new keystroke cancels the pending fetch
+  }, [query, minChars, debounceMs])
 
   return (
     <div className={block}>
