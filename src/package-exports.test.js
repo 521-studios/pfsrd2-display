@@ -20,12 +20,14 @@ test('ESM entry resolves and exposes named exports', async () => {
   const mod = await import(pkg)
   assert.strictEqual(typeof mod.CreatureStatBlock, 'function')
   assert.ok(mod.DisplayProvider, 'DisplayProvider export missing')
+  assert.strictEqual(typeof mod.Markdown, 'function', 'Markdown export missing')
 })
 
 test('CJS entry resolves and exposes named exports', () => {
   const require = createRequire(import.meta.url)
   const mod = require(pkg)
   assert.strictEqual(typeof mod.CreatureStatBlock, 'function')
+  assert.strictEqual(typeof mod.Markdown, 'function', 'Markdown export missing')
 })
 
 test('subpaths resolve per the exports map AND exist on disk', () => {
