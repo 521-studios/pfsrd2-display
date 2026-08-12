@@ -4,6 +4,6 @@ dist-site/
 .DS_Store
 .env
 
-# Playwright e2e artifacts
+# Playwright e2e
 playwright-report/
 test-results/

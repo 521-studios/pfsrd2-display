@@ -84,6 +84,7 @@ function SearchPanel({ onSelect }) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           style={styles.searchInput}
+          data-testid="creature-search"
           autoFocus
         />
       </div>
@@ -104,6 +105,8 @@ function SearchResult({ result, onSelect }) {
   return (
     <div
       style={styles.resultItem}
+      data-testid="search-result"
+      data-name={result.name}
       onClick={() => onSelect(result)}
       onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#333')}
       onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
@@ -203,6 +206,7 @@ function TemplateBar({ edition, templateStack, onApply, onRemoveLast, onClearAll
         <strong style={{ marginRight: 8 }}>Templates:</strong>
         <select
           style={styles.templateSelect}
+          data-testid="template-select"
           onChange={(e) => {
             const t = templates.find((t) => t.game_id === e.target.value)
             if (t) handleApply(t)
@@ -607,7 +611,7 @@ function DetailPanel({ selected, onLoadMonster, initialStack, onInitialStackCons
             onRemoveLast={handleRemoveLast}
             onClearAll={handleClearAll}
           />
-          <div style={styles.statBlock}>
+          <div style={styles.statBlock} data-testid="stat-block">
             <ErrorBoundary>
               <CreatureStatBlock
                 data={displayedCreature}

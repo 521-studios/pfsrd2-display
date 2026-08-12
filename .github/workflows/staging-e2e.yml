@@ -1,0 +1,40 @@
+name: Staging E2E
+
+# Runs the Playwright functional suite against the DEPLOYED staging harness
+# (display.pfsrd2.staging.521studios.com) after a staging deploy finishes, or on
+# demand. No AWS creds — it drives the real public site over HTTPS.
+on:
+  workflow_run:
+    workflows: ["Deploy pfsrd2-display"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+# Serialize: a manual dispatch racing an auto workflow_run would run overlapping
+# suites against the shared staging harness.
+concurrency:
+  group: display-staging-e2e
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: Playwright vs staging
+    runs-on: ubuntu-latest
+    # Only after a *successful* deploy (or a manual run).
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - run: npm run e2e:install
+      - name: Run E2E
+        run: npm run e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
