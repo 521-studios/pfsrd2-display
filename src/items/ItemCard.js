@@ -36,10 +36,13 @@ const ItemCard = ({ data, masked, maskLabel, variant = 0, onVariantChange }) => 
   // stat_block wrapper and provide these fields at the top level.
   const stat_block = data.stat_block || data
   const { bulk, traits, text } = stat_block
-  const variants = Array.isArray(stat_block.variants) ? stat_block.variants : []
-  // The selected variant overrides name/level/price; the rest is shared. Clamp so
-  // an out-of-range index falls back to the base rather than crashing.
-  const chosen = variants[variant]
+  const allVariants = Array.isArray(stat_block.variants) ? stat_block.variants : []
+  // Only treat it as "having variants" when there's a real choice (>1); a lone
+  // entry equals the base, so it neither overrides nor shows a selector. The
+  // selected variant overrides name/level/price; the rest is shared. An
+  // out-of-range index falls back to the base rather than crashing.
+  const hasVariants = allVariants.length > 1
+  const chosen = hasVariants ? allVariants[variant] : undefined
   const name = chosen ? chosen.name : data.name
   const level = chosen ? chosen.level : stat_block.level
   const price = chosen ? chosen.price : stat_block.price
@@ -53,16 +56,15 @@ const ItemCard = ({ data, masked, maskLabel, variant = 0, onVariantChange }) => 
         ) : null}
       </div>
 
-      {variants.length > 1 ? (
+      {hasVariants && onVariantChange ? (
         <div className='Monster__variants'>
           <select
             className='Monster__variant-select'
             aria-label='variant'
             value={variant}
-            disabled={!onVariantChange}
-            onChange={(e) => onVariantChange && onVariantChange(Number(e.target.value))}
+            onChange={(e) => onVariantChange(Number(e.target.value))}
           >
-            {variants.map((v, i) => (
+            {allVariants.map((v, i) => (
               <option key={i} value={i}>
                 {v.name}{v.level !== undefined && v.level !== null ? ` (Lvl ${v.level})` : ''}
               </option>

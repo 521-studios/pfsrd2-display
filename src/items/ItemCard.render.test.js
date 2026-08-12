@@ -110,3 +110,22 @@ describe('ItemCard variants (render)', () => {
     assert.match(html, /Item 4/) // fell back to base
   })
 })
+
+describe('ItemCard variants — safety + read-only', () => {
+  it('a masked item with variants leaks no variant name/level/price and shows no selector', () => {
+    const html = renderToStaticMarkup(
+      <ItemCard data={runeItem} masked maskLabel='mystery rune' variant={2} onVariantChange={() => {}} />
+    )
+    assert.match(html, /mystery rune/)
+    assert.doesNotMatch(html, /Striking/) // no base OR variant name
+    assert.doesNotMatch(html, /31,065 gp/) // no variant price
+    assert.doesNotMatch(html, /Item 19/) // no variant level
+    assert.doesNotMatch(html, /aria-label="variant"/) // no selector
+  })
+
+  it('renders no interactive selector without onVariantChange, but still shows the chosen variant', () => {
+    const html = renderToStaticMarkup(<ItemCard data={runeItem} variant={1} />)
+    assert.doesNotMatch(html, /aria-label="variant"/) // no dead/inert selector
+    assert.match(html, /Item 12/) // the Greater variant still renders (read-only)
+  })
+})
