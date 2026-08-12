@@ -76,6 +76,20 @@ test('listTemplates stops when a short page arrives even if total is missing', a
   assert.equal(n, 1) // did not loop forever on a missing total
 })
 
+test('listTemplates keeps paging on a FULL page with no total (relies on short-page)', async () => {
+  // A full page with no `total` must NOT be treated as done — otherwise a second
+  // page of results is silently dropped. Fetch until the short page terminates.
+  const pages = [
+    { results: [{ game_id: '1', name: 'A' }, { game_id: '2', name: 'B' }] }, // full, no total
+    { results: [{ game_id: '3', name: 'C' }] }, // short → stop
+  ]
+  let i = 0
+  const get = async () => pages[i++]
+  const out = await listTemplates({ get, edition: 'remastered', pageSize: 2 })
+  assert.deepEqual(out.map((t) => t.name), ['A', 'B', 'C'])
+  assert.equal(i, 2) // both pages fetched
+})
+
 test('applyTemplate posts the body and returns the parsed result; selections optional', async () => {
   let sent = null
   const post = async (body) => {

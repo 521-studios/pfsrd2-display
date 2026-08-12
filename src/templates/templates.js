@@ -53,13 +53,16 @@ export async function listTemplates({ get, edition, pageSize = 20 }) {
   const editionFilter = edition ? `&applicable_to=${encodeURIComponent(edition)}` : ''
   let offset = 0
   let all = []
-  // Bound the loop by the reported total; guard against a missing/!finite total.
+  // Terminate on a short page (the source is exhausted — a finite dataset always
+  // yields one, so this alone prevents an infinite loop) OR once a reported total
+  // is reached. When `total` is absent we rely solely on the short-page signal;
+  // treating a missing total as "done" would truncate after the first full page.
   for (;;) {
     const data = await get(`/search?type=monster_templates&limit=${pageSize}&offset=${offset}${editionFilter}`)
     const results = (data && data.results) || []
     all = all.concat(results)
-    const total = data && Number.isFinite(data.total) ? data.total : all.length
-    if (results.length < pageSize || all.length >= total) break
+    const totalReached = data && Number.isFinite(data.total) && all.length >= data.total
+    if (results.length < pageSize || totalReached) break
     offset += pageSize
   }
   return all.sort((a, b) => a.name.localeCompare(b.name))
