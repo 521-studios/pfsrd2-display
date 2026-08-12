@@ -13,9 +13,14 @@ test('applying a template highlights the changed values', async ({ page }) => {
   await expect(statBlock.locator('.Monster__changed')).toHaveCount(0) // nothing changed yet
 
   // Pick a real template (skip the disabled "+ Add template" placeholder).
+  // The template list loads via a paginated fetch that only STARTS once the
+  // creature is selected, so web-first WAIT for a real option to exist before
+  // reading — allTextContents() is a one-shot read and would otherwise race the
+  // fetch (flaky against a cold Lambda).
   const select = page.getByTestId('template-select')
-  await expect(select).toBeEnabled()
-  const optionLabels = await select.locator('option:not([disabled])').allTextContents()
+  const realOptions = select.locator('option:not([disabled])')
+  await expect(realOptions.first()).toBeAttached() // gates on the fetch landing
+  const optionLabels = await realOptions.allTextContents()
   expect(optionLabels.length, 'the creature should have applicable templates').toBeGreaterThan(0)
   // Prefer Elite (universal adjustment) for a stable, always-present choice.
   const choice = optionLabels.find((l) => /elite/i.test(l)) || optionLabels[0]

@@ -11,8 +11,17 @@ export async function searchAndSelect(page, query, name) {
   const results = page.getByTestId('search-result')
   await expect(results.first()).toBeVisible()
 
-  // data-name is on the result element itself, so match by attribute directly.
-  const target = name ? page.locator(`[data-testid="search-result"][data-name="${name}"]`).first() : results.first()
+  let target
+  if (name) {
+    // Escape quotes so a name with a " can't break the attribute selector.
+    const sel = `[data-testid="search-result"][data-name="${name.replace(/"/g, '\\"')}"]`
+    target = page.locator(sel).first()
+    // Fail fast with a clear message if the creature fell outside the search
+    // cap (limit:15) — otherwise the click would hang until the 90s test timeout.
+    await expect(target, `result "${name}" should be in the search results`).toBeVisible()
+  } else {
+    target = results.first()
+  }
   await target.click()
 
   const statBlock = page.getByTestId('stat-block')
