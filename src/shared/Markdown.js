@@ -1,4 +1,5 @@
 import React from 'react'
+import PropTypes from 'prop-types'
 import MarkdownIt from 'markdown-it'
 
 function markdown(text) {
@@ -94,19 +95,33 @@ function get_action_image(action_name) {
   return images[action_name]
 }
 
-const Markdown = (props) => {
-  const { text } = props
-
+// Markdown renders GM/creature text. Default is inline (a <span>, paragraph tags
+// stripped) — right for the short flavor strings inside a stat block. Pass
+// block for multi-paragraph prose (an encounter description): a <div> that keeps
+// paragraphs and headings via the full block renderer.
+const Markdown = ({ text, block = false }) => {
   if (!text) {
     return null
   }
-
+  if (block) {
+    return (
+      <div
+        className="Markdown Markdown--block"
+        dangerouslySetInnerHTML={{ __html: markdown(text) }}
+      />
+    )
+  }
   return (
     <span
       className="Markdown"
       dangerouslySetInnerHTML={{ __html: markdown_inline(text) }}
     />
   )
+}
+
+Markdown.propTypes = {
+  text: PropTypes.string,
+  block: PropTypes.bool,
 }
 
 export { markdown, markdown_inline }
