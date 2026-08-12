@@ -5,5 +5,6 @@ export { default as CreatureStatBlockV1_2 } from './creatures/CreatureStatBlockV
 export { default as CreatureStatBlockV1_3 } from './creatures/CreatureStatBlockV1_3'
 export { default as ItemCard } from './items/ItemCard'
 export { default as Markdown } from './shared/Markdown'
+export { default as CreatureSearch } from './search/CreatureSearch'
 export { DisplayProvider, useDisplay, useIsChanged } from './context/DisplayContext'
 export { buildChangedPaths } from './shared/patches'
