@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { createRoot } from 'react-dom/client'
-import { CreatureStatBlock, CreatureSearch } from '../src/index.js'
+import { CreatureStatBlock, CreatureSearch, ItemSearch, ItemCard } from '../src/index.js'
 import Markdown from '../src/shared/Markdown'
 import '../styles/index.css'
 
@@ -44,11 +44,29 @@ async function parseMultipartResponse(response) {
   return { patches, creature }
 }
 
-// --- Search Panel ---
+// --- Mode Toggle (creatures vs items) ---
+function ModeToggle({ mode, onChange }) {
+  return (
+    <div style={styles.modeToggle}>
+      {[['creatures', 'Creatures'], ['items', 'Items']].map(([m, label]) => (
+        <button
+          key={m}
+          onClick={() => onChange(m)}
+          data-testid={`mode-${m}`}
+          style={{ ...styles.modeBtn, ...(mode === m ? styles.modeBtnActive : {}) }}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+// --- Search Panel (creatures) ---
 // Reference wiring for the library's CreatureSearch: the harness owns the data
 // (the fetch to /search/suggest/unified, querying monsters + npcs), the library
 // owns the UX (debounce, stale-response guard, result rendering + selection).
-function SearchPanel({ onSelect }) {
+function SearchPanel({ onSelect, mode, onModeChange }) {
   const searchCreatures = useCallback(async (query) => {
     const params = new URLSearchParams({ q: query, limit: '15' })
     params.append('type', 'monsters')
@@ -61,8 +79,66 @@ function SearchPanel({ onSelect }) {
     <div style={styles.searchPanel}>
       <div style={styles.searchHeader}>
         <h2 style={{ margin: '0 0 8px' }}>pfsrd2-display</h2>
+        <ModeToggle mode={mode} onChange={onModeChange} />
         <CreatureSearch search={searchCreatures} onSelect={onSelect} />
       </div>
+    </div>
+  )
+}
+
+// --- Item Panel ---
+// Reference wiring for the library's ItemSearch: the harness owns the data (a
+// suggest across the item types), the library owns the UX. The picked item is
+// fetched full and rendered with the library's ItemCard.
+function ItemPanel({ onSelect, mode, onModeChange }) {
+  const searchItems = useCallback(async (query) => {
+    const params = new URLSearchParams({ q: query, limit: '15' })
+    for (const t of ['equipment', 'weapons', 'armor', 'shields']) params.append('type', t)
+    const res = await fetch(`${API}/search/suggest/unified?${params}`)
+    return res.json()
+  }, [])
+
+  return (
+    <div style={styles.searchPanel}>
+      <div style={styles.searchHeader}>
+        <h2 style={{ margin: '0 0 8px' }}>pfsrd2-display</h2>
+        <ModeToggle mode={mode} onChange={onModeChange} />
+        <ItemSearch search={searchItems} onSelect={onSelect} />
+      </div>
+    </div>
+  )
+}
+
+function ItemDetail({ item }) {
+  const [data, setData] = useState(null)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    setError(null)
+    if (!item) {
+      setData(null)
+      return
+    }
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch(`${API}/entries/${item.game_id}/full`)
+        const full = await res.json()
+        if (!cancelled) setData(full.entry ? full.entry : full)
+      } catch (e) {
+        if (!cancelled) setError(String(e.message || e))
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [item])
+
+  return (
+    <div style={styles.detailPanel} data-testid="item-detail">
+      {!item && <div style={styles.placeholder}>Search for an item…</div>}
+      {error && <div style={{ color: '#f55' }}>{error}</div>}
+      {data && <ItemCard data={data} />}
     </div>
   )
 }
@@ -1188,7 +1264,9 @@ function ShareLink({ href }) {
 
 // --- App ---
 function App() {
+  const [mode, setMode] = useState('creatures')
   const [selected, setSelected] = useState(null)
+  const [selectedItem, setSelectedItem] = useState(null)
   const [initialStack, setInitialStack] = useState(null)
 
   // Deep-link restore: ?creature=<gid>&v=<schema>&stack=<b64url>
@@ -1215,13 +1293,22 @@ function App() {
 
   return (
     <>
-      <SearchPanel onSelect={setSelected} />
-      <DetailPanel
-        selected={selected}
-        onLoadMonster={loadMonster}
-        initialStack={initialStack}
-        onInitialStackConsumed={() => setInitialStack(null)}
-      />
+      {mode === 'creatures' ? (
+        <>
+          <SearchPanel onSelect={setSelected} mode={mode} onModeChange={setMode} />
+          <DetailPanel
+            selected={selected}
+            onLoadMonster={loadMonster}
+            initialStack={initialStack}
+            onInitialStackConsumed={() => setInitialStack(null)}
+          />
+        </>
+      ) : (
+        <>
+          <ItemPanel onSelect={setSelectedItem} mode={mode} onModeChange={setMode} />
+          <ItemDetail item={selectedItem} />
+        </>
+      )}
     </>
   )
 }
@@ -1239,6 +1326,27 @@ const styles = {
   searchHeader: {
     padding: 12,
     borderBottom: '1px solid #333',
+  },
+  modeToggle: {
+    display: 'flex',
+    gap: 4,
+    marginBottom: 8,
+  },
+  modeBtn: {
+    flex: 1,
+    padding: '6px 10px',
+    border: '1px solid #555',
+    borderRadius: 4,
+    background: '#1a1a1a',
+    color: '#aaa',
+    cursor: 'pointer',
+    fontSize: 13,
+  },
+  modeBtnActive: {
+    background: '#F79639',
+    color: '#1a1a1a',
+    borderColor: '#F79639',
+    fontWeight: 'bold',
   },
   detailPanel: {
     flex: 1,

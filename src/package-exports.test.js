@@ -22,6 +22,7 @@ test('ESM entry resolves and exposes named exports', async () => {
   assert.ok(mod.DisplayProvider, 'DisplayProvider export missing')
   assert.strictEqual(typeof mod.Markdown, 'function', 'Markdown export missing')
   assert.strictEqual(typeof mod.CreatureSearch, 'function', 'CreatureSearch export missing')
+  assert.strictEqual(typeof mod.ItemSearch, 'function', 'ItemSearch export missing')
 })
 
 test('CJS entry resolves and exposes named exports', () => {
@@ -30,6 +31,7 @@ test('CJS entry resolves and exposes named exports', () => {
   assert.strictEqual(typeof mod.CreatureStatBlock, 'function')
   assert.strictEqual(typeof mod.Markdown, 'function', 'Markdown export missing')
   assert.strictEqual(typeof mod.CreatureSearch, 'function', 'CreatureSearch export missing')
+  assert.strictEqual(typeof mod.ItemSearch, 'function', 'ItemSearch export missing')
 })
 
 test('subpaths resolve per the exports map AND exist on disk', () => {
