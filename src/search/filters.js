@@ -10,7 +10,7 @@ import PropTypes from 'prop-types'
 // type, `suggest(prefix, selected)` returns the traits that still narrow the
 // current selection (the "filtered by what's already selected" behavior lives in
 // the API). Enter (or clicking an option) adds a chip; chips AND together.
-export function TraitChips({ value, onChange, suggest, block, debounceMs = 200 }) {
+export function TraitChips({ value, onChange, suggest, block, debounceMs = 200, contextKey = '' }) {
   const [input, setInput] = useState('')
   const [options, setOptions] = useState([])
   // The prefix the current `options` were fetched for — Enter only accepts the
@@ -28,8 +28,10 @@ export function TraitChips({ value, onChange, suggest, block, debounceMs = 200 }
     suggestRef.current = suggest
   }, [suggest])
 
-  // Re-suggest on prefix change AND on selection change (adding/removing a chip
-  // re-narrows the co-occurring options).
+  // Re-suggest on prefix change, selection change (adding/removing a chip
+  // re-narrows), AND when the consumer's filter context changes (contextKey —
+  // e.g. an item's category/subcategory) so a facet change refetches even if it
+  // didn't blur the input.
   const selectedKey = JSON.stringify(value)
   useEffect(() => {
     if (!focused) return undefined
@@ -51,7 +53,7 @@ export function TraitChips({ value, onChange, suggest, block, debounceMs = 200 }
     }, debounceMs)
     return () => clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [input, selectedKey, debounceMs, focused])
+  }, [input, selectedKey, debounceMs, focused, contextKey])
 
   const add = (trait) => {
     const t = (trait || '').trim()
@@ -129,6 +131,8 @@ TraitChips.propTypes = {
   suggest: PropTypes.func.isRequired,
   block: PropTypes.string.isRequired,
   debounceMs: PropTypes.number,
+  // Opaque key; when it changes, options refetch (e.g. the active item facet).
+  contextKey: PropTypes.string,
 }
 
 // FacetSelect renders cascading category → subcategory dropdowns for item search.

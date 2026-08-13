@@ -45,6 +45,8 @@ export default function ItemSearch({ suggestTraits, loadFacets, ...props }) {
             // Inject the active facet so trait suggestions co-occur within the
             // selected category/subcategory (not just the item types + chips).
             suggest={(prefix, selected) => suggestTraits(prefix, selected, { category, subcategory })}
+            // …and refetch when the facet changes, even without a blur/refocus.
+            contextKey={JSON.stringify({ category, subcategory })}
             block="ItemSearch"
           />
         )}
