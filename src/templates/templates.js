@@ -72,12 +72,38 @@ export async function listTemplates({ get, edition, pageSize = 20 }) {
 // { patches, creature }. `post(bodyString) => Promise<Response>` is consumer-
 // supplied (it adds Content-Type + any auth/OAC headers). `selections` is
 // optional — omitted for elite/weak and no-selection templates.
-export async function applyTemplate({ post, creature, templateGameId, selections }) {
+export async function applyTemplate({ post, get, creature, templateGameId, selections }) {
   const body =
     selections && selections.length > 0
       ? JSON.stringify({ creature, template_game_id: templateGameId, selections })
       : JSON.stringify({ creature, template_game_id: templateGameId })
-  const res = await post(body)
+  // Apply the template (→ patches + modified creature) and, when a `get` is
+  // supplied, fetch the template's OWN full entry in parallel. Returning it as
+  // `templateData` means the caller has everything the applied-template section
+  // needs (via appliedTemplates(stack) → CreatureStatBlock) without a second,
+  // hand-rolled fetch+assemble step in every consumer. `get` optional / null on
+  // failure keeps back-compat and degrades gracefully (section simply omitted).
+  const [res, templateData] = await Promise.all([
+    post(body),
+    get
+      ? Promise.resolve(get(`/entries/${templateGameId}/full`))
+          .then((d) => (d && d.entry ? d.entry : d))
+          .catch(() => null)
+      : Promise.resolve(null),
+  ])
   if (!res.ok) throw new Error(`Template apply failed: ${res.status}`)
-  return parseMultipartResponse(res)
+  const { patches, creature: applied } = await parseMultipartResponse(res)
+  return { patches, creature: applied, templateData }
+}
+
+// appliedTemplates collects each stack entry's applied-template full entry
+// (`templateData`, as returned by applyTemplate) into the array that
+// CreatureStatBlock's `appliedTemplates` prop renders as per-template sections.
+// Symmetric with mergePatches(stack): the consumer passes both and owns no
+// gathering logic. Returns null when there are none (the prop's "no section"
+// sentinel).
+export function appliedTemplates(stack) {
+  if (!stack || stack.length === 0) return null
+  const templates = stack.map((entry) => entry && entry.templateData).filter(Boolean)
+  return templates.length > 0 ? templates : null
 }

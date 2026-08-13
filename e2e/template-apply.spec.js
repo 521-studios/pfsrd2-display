@@ -28,5 +28,11 @@ test('applying a template highlights the changed values', async ({ page }) => {
 
   // The applied template highlights at least one modified value.
   await expect(statBlock.locator('.Monster__changed').first()).toBeVisible()
+
+  // …and the library renders the template's OWN section (from templateData, which
+  // applyTemplate now fetches — no consumer-side gathering).
+  await expect(statBlock.locator('.Monster__template-title')).toBeVisible()
+  await expect(statBlock.locator('.Monster__template-title').first()).toContainText('Template')
+
   expect(apiErrors, 'no pfsrd2 API call should 4xx/5xx').toEqual([])
 })

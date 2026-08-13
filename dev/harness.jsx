@@ -9,12 +9,16 @@ import {
   listTemplates,
   applyTemplate,
   mergePatches,
+  appliedTemplates as buildAppliedTemplates,
   parseMultipartResponse,
 } from '../src/index.js'
 import Markdown from '../src/shared/Markdown'
 import '../styles/index.css'
 
 const API = '/api/pfsrd2'
+// Consumer-owned GET for the library's `get` seam (applyTemplate/listTemplates):
+// returns the parsed JSON for an /api/pfsrd2 path, or null on a non-OK response.
+const fetchJson = (path) => fetch(`${API}${path}`).then((r) => (r.ok ? r.json() : null))
 
 class ErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { error: null } }
@@ -384,22 +388,20 @@ function DetailPanel({ selected, onLoadMonster, initialStack, onInitialStackCons
       : originalCreature
 
     // Apply via the library (it owns the multipart parse); fetch the template's
-    // full JSON in parallel for the appliedTemplates display. signedApplyPost
-    // adds the OAC x-amz-content-sha256 header the library stays agnostic of.
-    const [{ patches, creature }, templateRes] = await Promise.all([
-      applyTemplate({
-        post: signedApplyPost,
-        creature: currentCreature,
-        templateGameId: template.game_id,
-      }),
-      fetch(`${API}/entries/${template.game_id}/full`),
-    ])
-    const templateData = templateRes.ok ? await templateRes.json() : null
+    // The library applies the template AND fetches its full entry (templateData)
+    // in one call — no separate fetch to keep in sync. signedApplyPost adds the
+    // OAC x-amz-content-sha256 header the library stays agnostic of.
+    const applied = await applyTemplate({
+      post: signedApplyPost,
+      get: fetchJson,
+      creature: currentCreature,
+      templateGameId: template.game_id,
+    })
 
     selSeq.current++ // invalidate selections applies raced against this push
     setTemplateStack((prev) => [
       ...prev,
-      { template: { game_id: template.game_id, name: template.name }, patches, creature, templateData, selections: [] },
+      { template: { game_id: template.game_id, name: template.name }, ...applied, selections: [] },
     ])
     } finally {
       setTmplBusy(false)
@@ -488,27 +490,22 @@ function DetailPanel({ selected, onLoadMonster, initialStack, onInitialStackCons
       let current = originalCreature
       for (const entry of initialStack) {
         try {
-          const [{ patches, creature }, entryRes] = await Promise.all([
-            applyTemplate({
-              post: signedApplyPost,
-              creature: current,
-              templateGameId: entry.g,
-              selections: entry.s || [],
-            }),
-            fetch(`${API}/entries/${entry.g}`),
-          ])
-          const meta = entryRes.ok ? await entryRes.json() : null
-          const name = (meta && meta.entry && meta.entry.name) || entry.g
-          const tplRes = await fetch(`${API}/entries/${entry.g}/full`)
-          const templateData = tplRes.ok ? await tplRes.json() : null
-          stack.push({
-            template: { game_id: entry.g, name },
-            patches,
-            creature,
-            templateData,
+          const applied = await applyTemplate({
+            post: signedApplyPost,
+            get: fetchJson,
+            creature: current,
+            templateGameId: entry.g,
             selections: entry.s || [],
           })
-          current = creature
+          // The template's own full entry (templateData) carries its name — no
+          // separate /entries lookup needed.
+          const name = (applied.templateData && applied.templateData.name) || entry.g
+          stack.push({
+            template: { game_id: entry.g, name },
+            ...applied,
+            selections: entry.s || [],
+          })
+          current = applied.creature
         } catch (e) {
           console.error('Deep-link restore stopped:', e)
           break
@@ -540,14 +537,8 @@ function DetailPanel({ selected, onLoadMonster, initialStack, onInitialStackCons
   // Merge all patch operations from the stack into one flat array
   const mergedPatches = useMemo(() => mergePatches(templateStack), [templateStack])
 
-  // Collect template full JSON objects for rendering in the stat block
-  const appliedTemplates = useMemo(() => {
-    if (templateStack.length === 0) return null
-    const templates = templateStack
-      .map((entry) => entry.templateData)
-      .filter(Boolean)
-    return templates.length > 0 ? templates : null
-  }, [templateStack])
+  // The applied-template sections come straight from the library helper.
+  const appliedTemplates = useMemo(() => buildAppliedTemplates(templateStack), [templateStack])
 
   if (!selected) {
     return (
