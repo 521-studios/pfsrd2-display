@@ -11,6 +11,7 @@ export { default as TemplatePicker } from './templates/TemplatePicker'
 export {
   parseMultipartResponse,
   mergePatches,
+  appliedTemplates,
   listTemplates,
   applyTemplate,
 } from './templates/templates'

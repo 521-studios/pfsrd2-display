@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import {
   parseMultipartResponse,
   mergePatches,
+  appliedTemplates,
   listTemplates,
   applyTemplate,
 } from './templates.js'
@@ -117,4 +118,49 @@ test('applyTemplate throws on a non-ok response', async () => {
     () => applyTemplate({ post, creature: {}, templateGameId: 'T:3' }),
     /Template apply failed: 403/,
   )
+})
+
+test('applyTemplate fetches the template full entry via get and returns it as templateData', async () => {
+  const post = async () => fakeApplyResponse({ patches: {}, creature: { name: 'X' } })
+  let asked = null
+  const get = async (path) => {
+    asked = path
+    return { name: 'Elite', monster_template: { adjustments: [] } }
+  }
+  const { templateData } = await applyTemplate({ post, get, creature: {}, templateGameId: 'MT:9' })
+  assert.equal(asked, '/entries/MT:9/full') // library builds the full-entry path
+  assert.equal(templateData.name, 'Elite')
+})
+
+test('applyTemplate unwraps a { entry } wrapper and tolerates a get failure', async () => {
+  const post = async () => fakeApplyResponse({ patches: {}, creature: {} })
+  const wrapped = await applyTemplate({
+    post, creature: {}, templateGameId: 'T:1',
+    get: async () => ({ entry: { name: 'Wrapped' } }),
+  })
+  assert.equal(wrapped.templateData.name, 'Wrapped') // unwrapped
+
+  const failed = await applyTemplate({
+    post, creature: {}, templateGameId: 'T:1',
+    get: async () => { throw new Error('boom') },
+  })
+  assert.equal(failed.templateData, null) // failure → null, no throw
+})
+
+test('applyTemplate without get leaves templateData null (back-compat)', async () => {
+  const post = async () => fakeApplyResponse({ patches: {}, creature: {} })
+  const { templateData } = await applyTemplate({ post, creature: {}, templateGameId: 'T:1' })
+  assert.equal(templateData, null)
+})
+
+test('appliedTemplates collects each entry.templateData, drops nulls, null when empty', () => {
+  assert.equal(appliedTemplates([]), null)
+  assert.equal(appliedTemplates(null), null)
+  assert.equal(appliedTemplates([{ templateData: null }, { patches: {} }]), null) // none present
+  const out = appliedTemplates([
+    { templateData: { name: 'A' } },
+    { templateData: null }, // a failed fetch is skipped
+    { templateData: { name: 'B' } },
+  ])
+  assert.deepEqual(out, [{ name: 'A' }, { name: 'B' }])
 })
