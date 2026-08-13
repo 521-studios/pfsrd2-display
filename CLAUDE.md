@@ -189,16 +189,17 @@ All visual elements use BEM-style class names under `.Monster__*`. Override in y
 | `.MonsterCard` | Portrait card (currently not rendered — portraits removed pending CUP licensing) |
 
 ### ItemCard versions
-An item with variants (a rune's Striking / Greater / Major) renders every version stacked, book-style. Selectable (a radiogroup) when the consumer passes `onVariantChange`, else a read-only list.
+An item with variants (a rune's Striking / Greater / Major) reads like the book. With no pick yet it stacks every version (a radiogroup when the consumer passes `onVariantChange`, else a read-only list). Once a version is chosen (`variant >= 0`) the card **collapses to just that version** — rendered as the item — with a "change version" control to reopen the full choice. Arrow keys rove the highlight; Enter/Space/click lock in.
 
 | Class | Purpose |
 |-------|---------|
 | `.Monster__variants` | Version list container (radiogroup or list) |
 | `.Monster__variant` | One version row |
 | `.Monster__variant--selectable` | Applied when the row is a selectable radio |
-| `.Monster__variant--selected` | The locked-in version (accent highlight) |
+| `.Monster__variant--selected` | The highlighted version (accent) |
 | `.Monster__variant-radio` | The ○ / ● selection dot |
 | `.Monster__variant-name` / `-level` / `-price` / `-text` | Per-version fields |
+| `.Monster__variant-change` | "change version" control on a locked (collapsed) card |
 
 ## Testing
 

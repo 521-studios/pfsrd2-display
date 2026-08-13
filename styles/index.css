@@ -683,3 +683,15 @@
   color: #bbb;
   font-style: italic;
 }
+/* Reopen the version choice from a locked (collapsed) card. */
+.Monster__variant-change {
+  margin-top: 0.5rem;
+  padding: 0;
+  background: none;
+  border: none;
+  color: #F79639;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.Monster__variant-change:hover { text-decoration: underline; }
+.Monster__variant-change:focus-visible { outline: 2px solid #F79639; outline-offset: 2px; }
