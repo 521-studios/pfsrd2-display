@@ -72,6 +72,7 @@ test('item search filters by category then subcategory', async ({ page }) => {
 })
 
 test('item search filters by a trait chip', async ({ page }) => {
+  const apiErrors = trackApiErrors(page)
   await page.goto('/', { waitUntil: 'domcontentloaded' })
   await page.getByTestId('mode-items').click()
   await page.getByTestId('item-search').fill('striking')
@@ -89,4 +90,65 @@ test('item search filters by a trait chip', async ({ page }) => {
   await expect(
     page.locator('[data-testid="item-search-result"][data-name="Striking"]'),
   ).toHaveCount(0)
+
+  expect(apiErrors, 'no pfsrd2 API call should 4xx/5xx').toEqual([])
+})
+
+test('removing a trait chip broadens the results again (Enter adds, remove restores)', async ({
+  page,
+}) => {
+  const apiErrors = trackApiErrors(page)
+  await page.goto('/', { waitUntil: 'domcontentloaded' })
+  await page.getByTestId('creature-search').fill('adult cinder dragon')
+  const cinder = page.locator('[data-testid="search-result"][data-name="Adult Cinder Dragon"]')
+  await expect(cinder).toBeVisible()
+
+  // Add via Enter — commits the top API option (canonical casing), not free text.
+  const traitInput = page.getByTestId('CreatureSearch-trait-input')
+  await traitInput.click()
+  await traitInput.fill('undead')
+  await expect(
+    page.locator('[data-testid="CreatureSearch-trait-option"]', { hasText: /^Undead$/ }).first(),
+  ).toBeVisible()
+  await traitInput.press('Enter')
+  await expect(page.getByTestId('CreatureSearch-chip')).toHaveText(/Undead/)
+  await expect(cinder).toHaveCount(0)
+
+  // Remove the chip → the non-undead creature returns (re-broadening re-search).
+  await page.locator('[aria-label="remove Undead"]').click()
+  await expect(page.getByTestId('CreatureSearch-chip')).toHaveCount(0)
+  await expect(cinder).toBeVisible()
+
+  expect(apiErrors, 'no pfsrd2 API call should 4xx/5xx').toEqual([])
+})
+
+test('changing category resets the subcategory filter', async ({ page }) => {
+  const apiErrors = trackApiErrors(page)
+  await page.goto('/', { waitUntil: 'domcontentloaded' })
+  await page.getByTestId('mode-items').click()
+  const category = page.getByTestId('ItemSearch-category')
+  const sub = page.getByTestId('ItemSearch-subcategory')
+
+  // Narrow to Runes → Fundamental Weapon Runes; Striking matches.
+  await category.selectOption('Runes')
+  await sub.selectOption('Fundamental Weapon Runes')
+  await page.getByTestId('item-search').fill('striking')
+  await expect(
+    page.locator('[data-testid="item-search-result"][data-name="Striking"]').first(),
+  ).toBeVisible()
+
+  // Switching category must reset the (now-invalid) subcategory to "All", not
+  // carry the stale "Fundamental Weapon Runes" into an Armor query.
+  await category.selectOption('Armor')
+  await expect(sub).toHaveValue('')
+
+  // Back to Runes with no subcategory → Striking reappears (the reset dropped the
+  // constraint, not merely the select's displayed value).
+  await category.selectOption('Runes')
+  await expect(sub).toHaveValue('')
+  await expect(
+    page.locator('[data-testid="item-search-result"][data-name="Striking"]').first(),
+  ).toBeVisible()
+
+  expect(apiErrors, 'no pfsrd2 API call should 4xx/5xx').toEqual([])
 })

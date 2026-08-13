@@ -7,8 +7,11 @@ import PropTypes from 'prop-types'
 // ids, and placeholder. Not exported; use the presets.
 //
 // The library owns the timing (debounce + a monotonic stale-response guard); the
-// CONSUMER owns the data via `search(query) => Promise<results[]>` (auth, URL,
-// which types). This is the one correct copy of the tricky async-ordering logic.
+// CONSUMER owns the data via `search(query, filters) => Promise<results[]>` (auth,
+// URL, which types). This is the one correct copy of the tricky async-ordering
+// logic. `filters` (optional) is an opaque object forwarded to search and, via its
+// serialization, re-runs the query when a filter changes; `filterBar` renders
+// above the input (both supplied by the CreatureSearch/ItemSearch presets).
 export default function TypeAhead({
   search,
   onSelect,
@@ -136,7 +139,7 @@ const resultShape = PropTypes.shape({
 })
 
 TypeAhead.propTypes = {
-  // search(query) -> Promise<result[]>. Consumer-owned (auth, URL, types).
+  // search(query, filters) -> Promise<result[]>. Consumer-owned (auth, URL, types).
   search: PropTypes.func.isRequired,
   onSelect: PropTypes.func.isRequired,
   placeholder: PropTypes.string,
@@ -145,6 +148,8 @@ TypeAhead.propTypes = {
   resultTestId: PropTypes.string,
   minChars: PropTypes.number,
   debounceMs: PropTypes.number,
+  filters: PropTypes.object, // opaque; forwarded to search + re-runs on change
+  filterBar: PropTypes.node, // filter UI rendered above the input
 }
 
 TypeAheadResult.propTypes = {

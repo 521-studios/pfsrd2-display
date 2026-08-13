@@ -464,12 +464,11 @@
   gap: 6px;
 }
 
-.CreatureSearch__facets,
+/* Facets are item-only (CreatureSearch has no category/subcategory). */
 .ItemSearch__facets {
   gap: 8px;
 }
 
-.CreatureSearch__facet-select,
 .ItemSearch__facet-select {
   flex: 1;
   min-width: 0;
@@ -481,7 +480,6 @@
   font-size: 13px;
 }
 
-.CreatureSearch__facet-select:disabled,
 .ItemSearch__facet-select:disabled {
   opacity: 0.5;
 }
