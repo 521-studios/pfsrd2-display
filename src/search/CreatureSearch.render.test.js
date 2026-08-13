@@ -41,3 +41,14 @@ describe('CreatureSearch (render)', () => {
     assert.match(filtered, /data-testid="CreatureSearch-trait-input"/)
   })
 })
+
+describe('CreatureSearch level filter (render)', () => {
+  const noop = () => {}
+  it('shows the level inputs only when levelFilter is set', () => {
+    const bare = renderToStaticMarkup(<CreatureSearch search={noop} onSelect={noop} />)
+    assert.doesNotMatch(bare, /CreatureSearch-level-min/)
+    const withLevel = renderToStaticMarkup(<CreatureSearch search={noop} onSelect={noop} levelFilter />)
+    assert.match(withLevel, /data-testid="CreatureSearch-level-min"/)
+    assert.match(withLevel, /data-testid="CreatureSearch-level-max"/)
+  })
+})

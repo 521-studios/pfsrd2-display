@@ -81,6 +81,8 @@ function SearchPanel({ onSelect, mode, onModeChange }) {
     params.append('type', 'monsters')
     params.append('type', 'npcs')
     if (filters?.traits?.length) params.set('traits', filters.traits.join(','))
+    if (filters?.levelMin) params.set('level_min', filters.levelMin)
+    if (filters?.levelMax) params.set('level_max', filters.levelMax)
     const res = await fetch(`${API}/search/suggest/unified?${params}`)
     return res.json()
   }, [])
@@ -105,6 +107,7 @@ function SearchPanel({ onSelect, mode, onModeChange }) {
         <CreatureSearch
           search={searchCreatures}
           suggestTraits={suggestCreatureTraits}
+          levelFilter
           onSelect={onSelect}
         />
       </div>
@@ -125,6 +128,8 @@ function ItemPanel({ onSelect, mode, onModeChange }) {
     if (filters?.traits?.length) params.set('traits', filters.traits.join(','))
     if (filters?.category) params.set('category', filters.category)
     if (filters?.subcategory) params.set('subcategory', filters.subcategory)
+    if (filters?.levelMin) params.set('level_min', filters.levelMin)
+    if (filters?.levelMax) params.set('level_max', filters.levelMax)
     const res = await fetch(`${API}/search/suggest/unified?${params}`)
     return res.json()
   }, [])
@@ -159,6 +164,7 @@ function ItemPanel({ onSelect, mode, onModeChange }) {
           search={searchItems}
           suggestTraits={suggestItemTraits}
           loadFacets={loadItemFacets}
+          levelFilter
           onSelect={onSelect}
         />
       </div>

@@ -223,3 +223,42 @@ test('picking a filter populates the list without typing (filter-only browse)', 
 
   expect(apiErrors, 'no pfsrd2 API call should 4xx/5xx').toEqual([])
 })
+
+test('creature search filters by a level range', async ({ page }) => {
+  const apiErrors = trackApiErrors(page)
+  await page.goto('/', { waitUntil: 'domcontentloaded' })
+
+  const cinder = page.locator('[data-testid="search-result"][data-name="Adult Cinder Dragon"]')
+  await page.getByTestId('creature-search').fill('adult cinder dragon')
+  await expect(cinder).toBeVisible() // Adult Cinder Dragon is level 14
+
+  // Cap the level at 5 → the level-14 dragon drops out.
+  await page.getByTestId('CreatureSearch-level-max').fill('5')
+  await expect(cinder).toHaveCount(0)
+
+  // Raise the cap → it returns.
+  await page.getByTestId('CreatureSearch-level-max').fill('20')
+  await expect(cinder.first()).toBeVisible()
+
+  expect(apiErrors, 'no pfsrd2 API call should 4xx/5xx').toEqual([])
+})
+
+test('item search filters by a level range', async ({ page }) => {
+  const apiErrors = trackApiErrors(page)
+  await page.goto('/', { waitUntil: 'domcontentloaded' })
+  await page.getByTestId('mode-items').click()
+
+  const striking = page.locator('[data-testid="item-search-result"][data-name="Striking"]')
+  await page.getByTestId('item-search').fill('striking')
+  await expect(striking.first()).toBeVisible() // the Striking rune is level 4
+
+  // Require level >= 10 → the level-4 rune drops out.
+  await page.getByTestId('ItemSearch-level-min').fill('10')
+  await expect(striking).toHaveCount(0)
+
+  // Lower the floor → it returns.
+  await page.getByTestId('ItemSearch-level-min').fill('1')
+  await expect(striking.first()).toBeVisible()
+
+  expect(apiErrors, 'no pfsrd2 API call should 4xx/5xx').toEqual([])
+})

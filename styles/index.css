@@ -448,12 +448,38 @@
 
 /* Search filters — trait chips + cascading category/subcategory dropdowns.
    Neutral defaults; consuming apps override the per-block classes freely. */
-.ItemSearch__filters {
+.ItemSearch__filters,
+.CreatureSearch__filters {
   display: flex;
   flex-direction: column;
   gap: 6px;
   margin-bottom: 8px;
 }
+
+/* Level range — inclusive min/max number inputs. */
+.CreatureSearch__level,
+.ItemSearch__level {
+  gap: 6px;
+}
+.CreatureSearch__level-label,
+.ItemSearch__level-label {
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #888;
+}
+.CreatureSearch__level-input,
+.ItemSearch__level-input {
+  width: 4.5em;
+  padding: 5px 6px;
+  border: 1px solid #555;
+  border-radius: 4px;
+  background: #1a1a1a;
+  color: #e0e0e0;
+  font-size: 13px;
+}
+.CreatureSearch__level-dash,
+.ItemSearch__level-dash { color: #888; }
 
 .CreatureSearch__filter,
 .ItemSearch__filter {

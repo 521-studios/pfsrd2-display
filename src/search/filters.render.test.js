@@ -2,7 +2,7 @@ import { describe, it } from 'node:test'
 import assert from 'node:assert'
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { TraitChips, FacetSelect } from './filters.js'
+import { TraitChips, FacetSelect, LevelRange } from './filters.js'
 
 // Static contract only — the debounced suggest, the loadFacets effect, and chip
 // add/remove interactions are e2e-covered (e2e/search-filters.spec.js). Effects
@@ -47,5 +47,21 @@ describe('FacetSelect (render)', () => {
     assert.match(html, />All subcategories</)
     // subcategory disabled until a category is picked
     assert.match(html, /aria-label="subcategory" disabled=""/)
+  })
+})
+
+describe('LevelRange (render)', () => {
+  const noop = () => {}
+  it('renders min + max number inputs carrying their values', () => {
+    const html = renderToStaticMarkup(
+      <LevelRange min="3" max="8" onMin={noop} onMax={noop} block="CreatureSearch" />,
+    )
+    assert.match(html, /data-testid="CreatureSearch-level-min"/)
+    assert.match(html, /data-testid="CreatureSearch-level-max"/)
+    assert.match(html, /type="number"/)
+    assert.match(html, /value="3"/)
+    assert.match(html, /value="8"/)
+    assert.match(html, /aria-label="min level"/)
+    assert.match(html, /aria-label="max level"/)
   })
 })
