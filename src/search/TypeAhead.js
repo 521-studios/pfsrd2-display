@@ -18,6 +18,8 @@ export default function TypeAhead({
   resultTestId,
   minChars = 2,
   debounceMs = 250,
+  filters,
+  filterBar,
 }) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
@@ -31,6 +33,14 @@ export default function TypeAhead({
   useEffect(() => {
     searchRef.current = search
   }, [search])
+  // Filters flow to search(query, filters) as the 2nd arg. A ref carries the
+  // latest value into the fetch; a serialized key drives re-search when a filter
+  // changes (so narrowing by trait/category re-queries the current text).
+  const filtersRef = useRef(filters)
+  useEffect(() => {
+    filtersRef.current = filters
+  }, [filters])
+  const filtersKey = filters ? JSON.stringify(filters) : ''
 
   useEffect(() => {
     // Bump the token BEFORE the early-return: shortening the query below minChars
@@ -45,7 +55,7 @@ export default function TypeAhead({
     setLoading(true)
     const timer = setTimeout(async () => {
       try {
-        const data = await searchRef.current(query)
+        const data = await searchRef.current(query, filtersRef.current)
         if (mine === seq.current) setResults(data || [])
       } catch {
         if (mine === seq.current) setResults([])
@@ -54,10 +64,11 @@ export default function TypeAhead({
       }
     }, debounceMs)
     return () => clearTimeout(timer) // a new keystroke cancels the pending fetch
-  }, [query, minChars, debounceMs])
+  }, [query, minChars, debounceMs, filtersKey])
 
   return (
     <div className={block}>
+      {filterBar}
       <input
         type="text"
         className={`${block}__input`}

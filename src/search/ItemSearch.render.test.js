@@ -30,4 +30,27 @@ describe('ItemSearch (render)', () => {
     const html = renderToStaticMarkup(<ItemSearch search={noop} onSelect={noop} />)
     assert.doesNotMatch(html, /ItemSearch__result"/)
   })
+
+  it('renders no filter controls when no filter callbacks are given', () => {
+    const html = renderToStaticMarkup(<ItemSearch search={noop} onSelect={noop} />)
+    assert.doesNotMatch(html, /ItemSearch-trait-input/)
+    assert.doesNotMatch(html, /ItemSearch-category/)
+  })
+
+  it('renders the trait chip filter when suggestTraits is supplied', () => {
+    const html = renderToStaticMarkup(
+      <ItemSearch search={noop} onSelect={noop} suggestTraits={noop} />,
+    )
+    assert.match(html, /data-testid="ItemSearch-trait-input"/)
+  })
+
+  it('renders cascading category/subcategory selects when loadFacets is supplied', () => {
+    const html = renderToStaticMarkup(
+      <ItemSearch search={noop} onSelect={noop} loadFacets={() => Promise.resolve({})} />,
+    )
+    assert.match(html, /data-testid="ItemSearch-category"/)
+    assert.match(html, /data-testid="ItemSearch-subcategory"/)
+    // subcategory is disabled until a category is chosen
+    assert.match(html, /aria-label="subcategory" disabled=""/)
+  })
 })

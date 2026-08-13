@@ -31,4 +31,13 @@ describe('CreatureSearch (render)', () => {
     assert.doesNotMatch(html, /CreatureSearch__result"/) // no result rows
     assert.doesNotMatch(html, /Searching/) // not loading at rest
   })
+
+  it('renders no trait filter without suggestTraits, and one with it', () => {
+    const bare = renderToStaticMarkup(<CreatureSearch search={noop} onSelect={noop} />)
+    assert.doesNotMatch(bare, /CreatureSearch-trait-input/)
+    const filtered = renderToStaticMarkup(
+      <CreatureSearch search={noop} onSelect={noop} suggestTraits={noop} />,
+    )
+    assert.match(filtered, /data-testid="CreatureSearch-trait-input"/)
+  })
 })
