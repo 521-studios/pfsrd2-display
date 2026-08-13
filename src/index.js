@@ -17,3 +17,12 @@ export {
 } from './templates/templates'
 export { DisplayProvider, useDisplay, useIsChanged } from './context/DisplayContext'
 export { buildChangedPaths } from './shared/patches'
+export {
+  COIN_TO_CP,
+  itemPrice,
+  itemPriceCp,
+  priceToCp,
+  coinsToCp,
+  formatGp,
+  creatureLevel,
+} from './shared/pf2e'

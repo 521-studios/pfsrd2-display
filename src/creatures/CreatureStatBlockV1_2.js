@@ -1,5 +1,6 @@
 import React from 'react'
 import Changed from '../shared/Changed'
+import { creatureLevel } from '../shared/pf2e'
 import Traits from './components/Traits'
 import Grafts from './components/Grafts'
 import Knowledges from './components/Knowledges'
@@ -28,7 +29,7 @@ const CreatureStatBlockV1_2 = ({ data }) => {
       <div className='Monster__header'>
         <div className='Monster__name'>{data.name}</div>
         <div className='Monster__level'>
-          {capitalize(data.type)} <Changed path="/stat_block/creature_type/level">{creature_type.level}</Changed>
+          {capitalize(data.type)} <Changed path="/stat_block/creature_type/level">{creatureLevel(data)}</Changed>
         </div>
       </div>
 

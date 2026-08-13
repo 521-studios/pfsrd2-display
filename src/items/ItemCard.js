@@ -2,6 +2,7 @@ import React, { useEffect, useId, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
 import Traits from '../creatures/components/Traits'
 import Markdown from '../shared/Markdown'
+import { itemPrice } from '../shared/pf2e'
 
 // Renders any item/equipment JSON handed to it: a pristine pfsrd2-data
 // entry, a constructed/derived snapshot (runes applied, scroll+spell, etc.),
@@ -57,7 +58,7 @@ const ItemCard = ({ data, masked, maskLabel, variant = -1, onVariantChange }) =>
   // Constructed/derived snapshots and hand-built customs may omit the
   // stat_block wrapper and provide these fields at the top level.
   const stat_block = data.stat_block || data
-  const { bulk, price, traits, text } = stat_block
+  const { bulk, traits, text } = stat_block
   const allVariants = Array.isArray(stat_block.variants) ? stat_block.variants : []
   // Only a real choice (>1) counts; a lone entry equals the base and renders plainly.
   const hasVariants = allVariants.length > 1
@@ -75,7 +76,9 @@ const ItemCard = ({ data, masked, maskLabel, variant = -1, onVariantChange }) =>
   const headerLevel = locked
     ? (chosen.level !== undefined && chosen.level !== null ? `Item ${chosen.level}` : null)
     : (familyLevel !== undefined && familyLevel !== null ? `Item ${familyLevel}${hasVariants ? '+' : ''}` : null)
-  const shownPrice = locked ? (chosen.price || price) : price
+  // Same base-or-chosen-variant price selection, via the shared accessor (index
+  // selector). Kept as the price object so we still render its `.text`.
+  const shownPrice = itemPrice(data, locked ? variant : -1)
 
   return (
     <div className='Monster'>
