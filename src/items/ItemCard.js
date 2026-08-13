@@ -1,4 +1,4 @@
-import React, { useRef } from 'react'
+import React, { useId, useRef } from 'react'
 import PropTypes from 'prop-types'
 import Traits from '../creatures/components/Traits'
 import Markdown from '../shared/Markdown'
@@ -98,6 +98,7 @@ const ItemCard = ({ data, masked, maskLabel, variant = -1, onVariantChange }) =>
 const VariantList = ({ variants, selected, onSelect }) => {
   const selectable = typeof onSelect === 'function'
   const refs = useRef([])
+  const baseId = useId() // stable per-card prefix so a radio's label = just its name
   // Roving tabindex: the selected row (or the first) is the tab stop.
   const activeIndex = selected >= 0 && selected < variants.length ? selected : 0
 
@@ -118,6 +119,7 @@ const VariantList = ({ variants, selected, onSelect }) => {
       className='Monster__variants'
       role={selectable ? 'radiogroup' : 'list'}
       aria-label={selectable ? 'Choose a version' : 'Versions'}
+      aria-required={selectable ? true : undefined}
     >
       {variants.map((v, i) => {
         const isSelected = i === selected
@@ -125,6 +127,7 @@ const VariantList = ({ variants, selected, onSelect }) => {
           ? {
               role: 'radio',
               'aria-checked': isSelected,
+              'aria-labelledby': `${baseId}-v${i}`, // announce just the version name
               tabIndex: i === activeIndex ? 0 : -1,
               ref: (el) => { refs.current[i] = el },
               onClick: () => onSelect(i),
@@ -140,7 +143,7 @@ const VariantList = ({ variants, selected, onSelect }) => {
             {selectable ? <span className='Monster__variant-radio' aria-hidden='true' /> : null}
             <div className='Monster__variant-main'>
               <div className='Monster__variant-header'>
-                <span className='Monster__variant-name'>{v.name}</span>
+                <span className='Monster__variant-name' id={`${baseId}-v${i}`}>{v.name}</span>
                 {v.level !== undefined && v.level !== null ? (
                   <span className='Monster__variant-level'>Item {v.level}</span>
                 ) : null}

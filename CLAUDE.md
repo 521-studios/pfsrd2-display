@@ -188,6 +188,18 @@ All visual elements use BEM-style class names under `.Monster__*`. Override in y
 | `.Monster__speed` | Speed line |
 | `.MonsterCard` | Portrait card (currently not rendered — portraits removed pending CUP licensing) |
 
+### ItemCard versions
+An item with variants (a rune's Striking / Greater / Major) renders every version stacked, book-style. Selectable (a radiogroup) when the consumer passes `onVariantChange`, else a read-only list.
+
+| Class | Purpose |
+|-------|---------|
+| `.Monster__variants` | Version list container (radiogroup or list) |
+| `.Monster__variant` | One version row |
+| `.Monster__variant--selectable` | Applied when the row is a selectable radio |
+| `.Monster__variant--selected` | The locked-in version (accent highlight) |
+| `.Monster__variant-radio` | The ○ / ● selection dot |
+| `.Monster__variant-name` / `-level` / `-price` / `-text` | Per-version fields |
+
 ## Testing
 
 Node's built-in test runner. No Jest, no Vitest, no assertion libs beyond `node:assert`.

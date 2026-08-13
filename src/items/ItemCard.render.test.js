@@ -43,6 +43,7 @@ describe('ItemCard unmasked variant (render)', () => {
     const html = renderToStaticMarkup(<ItemCard data={item} />)
     assert.match(html, /Wand of Fireball/)
     assert.match(html, /Item 5/)
+    assert.doesNotMatch(html, /Item 5\+/) // the "+" is only for version families
     assert.match(html, /340 gp/)
     assert.match(html, /casts fireball/)
   })
@@ -116,6 +117,50 @@ describe('ItemCard variants (render)', () => {
     assert.match(html, /role="list"/)
     assert.match(html, /Item 12/) // the Greater version still renders
     assert.match(html, /Item 19/) // and Major — all versions shown as reference
+    // a saved pick still highlights in the read-only view
+    assert.match(html, /Monster__variant--selected[\s\S]*Striking \(Greater\)/)
+    assert.equal(checkedCount(html), 0) // but no radio semantics (not interactive)
+  })
+
+  it('marks the radiogroup required and labels each radio by its version name only', () => {
+    const html = renderToStaticMarkup(<ItemCard data={runeItem} onVariantChange={() => {}} />)
+    assert.match(html, /aria-required="true"/)
+    assert.equal((html.match(/aria-labelledby="/g) || []).length, 3) // one per radio
+  })
+
+  it('renders per-version text when a version has it, and omits the block when none do', () => {
+    const withText = {
+      name: 'Armor Potency',
+      stat_block: {
+        level: 5,
+        traits: [{ name: 'Magical', classes: ['trait'] }],
+        variants: [
+          { name: 'Armor Potency (+1)', level: 5, price: { text: '160 gp' } },
+          { name: 'Armor Potency (+2)', level: 11, price: { text: '1,060 gp' }, text: 'Increase the item bonus to AC by 2.' }
+        ]
+      }
+    }
+    const withHtml = renderToStaticMarkup(<ItemCard data={withText} onVariantChange={() => {}} />)
+    assert.match(withHtml, /Monster__variant-text/)
+    assert.match(withHtml, /item bonus to AC by 2/)
+    // the runeItem versions carry no text → no per-version text block at all
+    const withoutHtml = renderToStaticMarkup(<ItemCard data={runeItem} onVariantChange={() => {}} />)
+    assert.doesNotMatch(withoutHtml, /Monster__variant-text/)
+  })
+
+  it('derives the header level from the versions when the base level is absent', () => {
+    const noBaseLevel = {
+      name: 'Weapon Potency',
+      stat_block: {
+        traits: [{ name: 'Magical', classes: ['trait'] }],
+        variants: [
+          { name: 'Weapon Potency (+1)', level: 6, price: { text: '35 gp' } },
+          { name: 'Weapon Potency (+2)', level: 10, price: { text: '935 gp' } }
+        ]
+      }
+    }
+    const html = renderToStaticMarkup(<ItemCard data={noBaseLevel} onVariantChange={() => {}} />)
+    assert.match(html, /Item 6\+/) // min of [6, 10], not the (absent) base level
   })
 
   it('has no version list for a plain item (no variants)', () => {
