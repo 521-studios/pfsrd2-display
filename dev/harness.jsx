@@ -125,11 +125,14 @@ function ItemPanel({ onSelect, mode, onModeChange }) {
     return res.json()
   }, [])
 
-  const suggestItemTraits = useCallback(async (prefix, selected) => {
+  const suggestItemTraits = useCallback(async (prefix, selected, context) => {
     const params = new URLSearchParams({ limit: '10' })
     if (prefix) params.set('q', prefix)
     for (const t of ITEM_TYPES) params.append('type', t)
     for (const t of selected) params.append('trait', t)
+    // Narrow suggestions to the active facet so they never yield zero results.
+    if (context?.category) params.set('category', context.category)
+    if (context?.subcategory) params.set('subcategory', context.subcategory)
     const res = await fetch(`${API}/search/traits?${params}`)
     return res.json()
   }, [])

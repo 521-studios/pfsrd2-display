@@ -154,3 +154,53 @@ test('changing category resets the subcategory filter', async ({ page }) => {
 
   expect(apiErrors, 'no pfsrd2 API call should 4xx/5xx').toEqual([])
 })
+
+test('item trait suggestions are narrowed by the selected category', async ({ page }) => {
+  const apiErrors = trackApiErrors(page)
+  await page.goto('/', { waitUntil: 'domcontentloaded' })
+  await page.getByTestId('mode-items').click()
+
+  // Narrow to Armor, then open the trait typeahead with prefix "a".
+  await page.getByTestId('ItemSearch-category').selectOption('Armor')
+  const traitInput = page.getByTestId('ItemSearch-trait-input')
+  await traitInput.click()
+  await traitInput.fill('a')
+
+  // The typeahead runs under the facet — an Armor trait shows…
+  await expect(
+    page.locator('[data-testid="ItemSearch-trait-option"]', { hasText: /^Abjuration$/ }).first(),
+  ).toBeVisible()
+  // …but Acid — an "a"-prefix trait on other items, not Armor — is filtered out.
+  await expect(
+    page.locator('[data-testid="ItemSearch-trait-option"]', { hasText: /^Acid$/ }),
+  ).toHaveCount(0)
+
+  expect(apiErrors, 'no pfsrd2 API call should 4xx/5xx').toEqual([])
+})
+
+test('trait suggestions refetch after the category changes (blur → refocus)', async ({ page }) => {
+  const apiErrors = trackApiErrors(page)
+  await page.goto('/', { waitUntil: 'domcontentloaded' })
+  await page.getByTestId('mode-items').click()
+  const traitInput = page.getByTestId('ItemSearch-trait-input')
+
+  // Focus with no facet, type "a" → Acid is offered.
+  await traitInput.click()
+  await traitInput.fill('a')
+  await expect(
+    page.locator('[data-testid="ItemSearch-trait-option"]', { hasText: /^Acid$/ }).first(),
+  ).toBeVisible()
+
+  // Change the category (this blurs the trait input), then refocus WITHOUT
+  // retyping — the focus-gated effect must refetch under the new facet.
+  await page.getByTestId('ItemSearch-category').selectOption('Armor')
+  await traitInput.click()
+  await expect(
+    page.locator('[data-testid="ItemSearch-trait-option"]', { hasText: /^Abjuration$/ }).first(),
+  ).toBeVisible()
+  await expect(
+    page.locator('[data-testid="ItemSearch-trait-option"]', { hasText: /^Acid$/ }),
+  ).toHaveCount(0)
+
+  expect(apiErrors, 'no pfsrd2 API call should 4xx/5xx').toEqual([])
+})
