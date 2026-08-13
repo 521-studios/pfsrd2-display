@@ -28,8 +28,19 @@ const ItemCard = ({ data, masked, maskLabel, variant = -1, onVariantChange }) =>
   // "Reopen the choice" is a local view toggle; the chosen index still lives with
   // the consumer. Reset it when the item itself changes.
   const [choosing, setChoosing] = useState(false)
+  const changeRef = useRef(null)
+  const commitFocus = useRef(false) // move focus to the change control after a commit
   const itemKey = data ? data.game_id || data.name : null
   useEffect(() => { setChoosing(false) }, [itemKey])
+  // After a keyboard commit collapses the list, land focus on the change control
+  // instead of dropping to <body>. (No-op for a mouse commit: :focus-visible
+  // won't show a ring for programmatic focus after a click.)
+  useEffect(() => {
+    if (commitFocus.current && changeRef.current) {
+      commitFocus.current = false
+      changeRef.current.focus()
+    }
+  })
 
   if (!data) { return null }
 
@@ -104,7 +115,7 @@ const ItemCard = ({ data, masked, maskLabel, variant = -1, onVariantChange }) =>
       ) : null}
 
       {locked && selectable ? (
-        <button type='button' className='Monster__variant-change' onClick={() => setChoosing(true)}>
+        <button ref={changeRef} type='button' className='Monster__variant-change' onClick={() => setChoosing(true)}>
           change version
         </button>
       ) : null}
@@ -113,7 +124,9 @@ const ItemCard = ({ data, masked, maskLabel, variant = -1, onVariantChange }) =>
         <VariantList
           variants={allVariants}
           selected={variant}
-          onSelect={selectable ? (i) => { onVariantChange(i); setChoosing(false) } : undefined}
+          autoFocus={choosing && !!chosen}
+          onRove={selectable ? onVariantChange : undefined}
+          onCommit={selectable ? (i) => { onVariantChange(i); commitFocus.current = true; setChoosing(false) } : undefined}
         />
       ) : null}
     </div>
@@ -121,23 +134,32 @@ const ItemCard = ({ data, masked, maskLabel, variant = -1, onVariantChange }) =>
 }
 
 // The stacked version list, shown while choosing. A keyboard-navigable radiogroup
-// when onSelect is a function; a read-only reference list otherwise. The selected
-// index highlights either way.
-const VariantList = ({ variants, selected, onSelect }) => {
-  const selectable = typeof onSelect === 'function'
+// when onCommit is a function; a read-only reference list otherwise. The selected
+// index highlights either way. Arrow keys ROVE (move the highlight via onRove)
+// without leaving the list; Enter/Space/click COMMIT (onCommit) — the consumer
+// collapses to the chosen version on commit, so arrows must not commit.
+const VariantList = ({ variants, selected, onRove, onCommit, autoFocus }) => {
+  const selectable = typeof onCommit === 'function'
   const refs = useRef([])
   const baseId = useId() // stable per-card prefix so a radio's label = just its name
   // Roving tabindex: the selected row (or the first) is the tab stop.
   const activeIndex = selected >= 0 && selected < variants.length ? selected : 0
 
+  // On reopen (via "change version"), land focus on the current pick so keyboard
+  // users can arrow immediately. Not on initial mount (would steal focus on load).
+  useEffect(() => {
+    if (autoFocus && refs.current[activeIndex]) { refs.current[activeIndex].focus() }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const move = (from, delta) => {
     const to = (from + delta + variants.length) % variants.length
-    onSelect(to)
+    onRove(to) // highlight only — stays in the list
     const el = refs.current[to]
     if (el) { el.focus() }
   }
   const onKeyDown = (e, i) => {
-    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(i) }
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onCommit(i) }
     else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') { e.preventDefault(); move(i, 1) }
     else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') { e.preventDefault(); move(i, -1) }
   }
@@ -158,7 +180,7 @@ const VariantList = ({ variants, selected, onSelect }) => {
               'aria-labelledby': `${baseId}-v${i}`, // announce just the version name
               tabIndex: i === activeIndex ? 0 : -1,
               ref: (el) => { refs.current[i] = el },
-              onClick: () => onSelect(i),
+              onClick: () => onCommit(i),
               onKeyDown: (e) => onKeyDown(e, i),
             }
           : { role: 'listitem' }
@@ -195,7 +217,9 @@ const VariantList = ({ variants, selected, onSelect }) => {
 VariantList.propTypes = {
   variants: PropTypes.array.isRequired,
   selected: PropTypes.number,
-  onSelect: PropTypes.func // (index) => void; when present, versions are selectable
+  onRove: PropTypes.func, // (index) => void; arrow-key highlight, no commit
+  onCommit: PropTypes.func, // (index) => void; Enter/Space/click; presence = selectable
+  autoFocus: PropTypes.bool // focus the current pick on mount (reopen), not on load
 }
 
 ItemCard.propTypes = {

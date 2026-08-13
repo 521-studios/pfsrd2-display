@@ -43,5 +43,19 @@ test('versions: stacked choice → lock in collapses to one → change reopens',
   await expect(card.locator('.Monster__level')).toContainText('Item 19')
   await expect(card.locator('.Monster__variants')).toHaveCount(0)
 
+  // Keyboard: reopen (focus lands on the current pick), arrow ROVES without
+  // collapsing, Enter commits.
+  await card.locator('.Monster__variant-change').click()
+  const list = card.locator('.Monster__variants[role="radiogroup"]')
+  await expect(list).toBeVisible()
+  await page.keyboard.press('ArrowUp') // Major → Greater, list stays open
+  await expect(list).toBeVisible()
+  await expect(
+    card.locator('.Monster__variant', { hasText: 'Striking (Greater)' }),
+  ).toHaveAttribute('aria-checked', 'true')
+  await page.keyboard.press('Enter') // commit → collapse
+  await expect(card.locator('.Monster__variants')).toHaveCount(0)
+  await expect(card.locator('.Monster__name')).toHaveText('Striking (Greater)')
+
   expect(apiErrors, 'no pfsrd2 API call should 4xx/5xx').toEqual([])
 })
