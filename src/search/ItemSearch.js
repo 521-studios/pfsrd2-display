@@ -39,7 +39,14 @@ export default function ItemSearch({ suggestTraits, loadFacets, ...props }) {
           />
         )}
         {suggestTraits && (
-          <TraitChips value={traits} onChange={setTraits} suggest={suggestTraits} block="ItemSearch" />
+          <TraitChips
+            value={traits}
+            onChange={setTraits}
+            // Inject the active facet so trait suggestions co-occur within the
+            // selected category/subcategory (not just the item types + chips).
+            suggest={(prefix, selected) => suggestTraits(prefix, selected, { category, subcategory })}
+            block="ItemSearch"
+          />
         )}
       </div>
     ) : null
@@ -62,7 +69,9 @@ ItemSearch.propTypes = {
   // filters = { traits: string[], category: string, subcategory: string }.
   search: PropTypes.func.isRequired,
   onSelect: PropTypes.func.isRequired,
-  // suggestTraits(prefix, selected) -> Promise<string[]>. Omit to hide the chips.
+  // suggestTraits(prefix, selected, { category, subcategory }) -> Promise<string[]>.
+  // The 3rd arg is the active facet so suggestions co-occur within it. Omit to
+  // hide the chips.
   suggestTraits: PropTypes.func,
   // loadFacets() -> Promise<{category: string[]}>. Omit to hide the dropdowns.
   loadFacets: PropTypes.func,

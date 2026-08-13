@@ -91,13 +91,15 @@ import { CreatureSearch, ItemSearch } from '@521studios/pfsrd2-display'
 <ItemSearch
   search={(q, { traits, category, subcategory }) => fetchSuggest(q, { traits, category, subcategory })}
   onSelect={(it) => {/* ... */}}
-  suggestTraits={(prefix, selected) => fetchTraits(prefix, selected)}  // → trait chips
+  suggestTraits={(prefix, selected, facet) => fetchTraits(prefix, selected, facet)}  // → trait chips
   loadFacets={() => fetchFacets()}  // Promise<{category: string[]}> → category/subcategory selects
 />
 ```
 
 - `suggestTraits(prefix, selected)` backs a co-occurrence chip typeahead — return
-  only traits that still narrow the current selection (`/search/traits`).
+  only traits that still narrow the current selection (`/search/traits`). For
+  `ItemSearch` it receives a 3rd `{ category, subcategory }` arg (the active facet)
+  so suggestions co-occur within it too; `CreatureSearch` calls it with two args.
 - `loadFacets()` returns the `{category: [subcategories]}` map (`/search/facets`,
   unwrap `.categories`) for the cascading dropdowns.
 - Filter BEM classes to override: `.CreatureSearch__chip` / `__chip-input` /
