@@ -7,8 +7,11 @@ import PropTypes from 'prop-types'
 // ids, and placeholder. Not exported; use the presets.
 //
 // The library owns the timing (debounce + a monotonic stale-response guard); the
-// CONSUMER owns the data via `search(query) => Promise<results[]>` (auth, URL,
-// which types). This is the one correct copy of the tricky async-ordering logic.
+// CONSUMER owns the data via `search(query, filters) => Promise<results[]>` (auth,
+// URL, which types). This is the one correct copy of the tricky async-ordering
+// logic. `filters` (optional) is an opaque object forwarded to search and, via its
+// serialization, re-runs the query when a filter changes; `filterBar` renders
+// above the input (both supplied by the CreatureSearch/ItemSearch presets).
 export default function TypeAhead({
   search,
   onSelect,
@@ -18,6 +21,8 @@ export default function TypeAhead({
   resultTestId,
   minChars = 2,
   debounceMs = 250,
+  filters,
+  filterBar,
 }) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
@@ -31,6 +36,14 @@ export default function TypeAhead({
   useEffect(() => {
     searchRef.current = search
   }, [search])
+  // Filters flow to search(query, filters) as the 2nd arg. A ref carries the
+  // latest value into the fetch; a serialized key drives re-search when a filter
+  // changes (so narrowing by trait/category re-queries the current text).
+  const filtersRef = useRef(filters)
+  useEffect(() => {
+    filtersRef.current = filters
+  }, [filters])
+  const filtersKey = filters ? JSON.stringify(filters) : ''
 
   useEffect(() => {
     // Bump the token BEFORE the early-return: shortening the query below minChars
@@ -45,7 +58,7 @@ export default function TypeAhead({
     setLoading(true)
     const timer = setTimeout(async () => {
       try {
-        const data = await searchRef.current(query)
+        const data = await searchRef.current(query, filtersRef.current)
         if (mine === seq.current) setResults(data || [])
       } catch {
         if (mine === seq.current) setResults([])
@@ -54,10 +67,11 @@ export default function TypeAhead({
       }
     }, debounceMs)
     return () => clearTimeout(timer) // a new keystroke cancels the pending fetch
-  }, [query, minChars, debounceMs])
+  }, [query, minChars, debounceMs, filtersKey])
 
   return (
     <div className={block}>
+      {filterBar}
       <input
         type="text"
         className={`${block}__input`}
@@ -125,7 +139,7 @@ const resultShape = PropTypes.shape({
 })
 
 TypeAhead.propTypes = {
-  // search(query) -> Promise<result[]>. Consumer-owned (auth, URL, types).
+  // search(query, filters) -> Promise<result[]>. Consumer-owned (auth, URL, types).
   search: PropTypes.func.isRequired,
   onSelect: PropTypes.func.isRequired,
   placeholder: PropTypes.string,
@@ -134,6 +148,8 @@ TypeAhead.propTypes = {
   resultTestId: PropTypes.string,
   minChars: PropTypes.number,
   debounceMs: PropTypes.number,
+  filters: PropTypes.object, // opaque; forwarded to search + re-runs on change
+  filterBar: PropTypes.node, // filter UI rendered above the input
 }
 
 TypeAheadResult.propTypes = {

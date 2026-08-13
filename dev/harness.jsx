@@ -72,11 +72,24 @@ function ModeToggle({ mode, onChange }) {
 // (the fetch to /search/suggest/unified, querying monsters + npcs), the library
 // owns the UX (debounce, stale-response guard, result rendering + selection).
 function SearchPanel({ onSelect, mode, onModeChange }) {
-  const searchCreatures = useCallback(async (query) => {
+  const searchCreatures = useCallback(async (query, filters) => {
     const params = new URLSearchParams({ q: query, limit: '15' })
     params.append('type', 'monsters')
     params.append('type', 'npcs')
+    if (filters?.traits?.length) params.set('traits', filters.traits.join(','))
     const res = await fetch(`${API}/search/suggest/unified?${params}`)
+    return res.json()
+  }, [])
+
+  // Co-occurring trait typeahead: pass the already-selected chips so the API only
+  // returns traits that still narrow the current creature selection.
+  const suggestCreatureTraits = useCallback(async (prefix, selected) => {
+    const params = new URLSearchParams({ limit: '10' })
+    if (prefix) params.set('q', prefix)
+    params.append('type', 'monsters')
+    params.append('type', 'npcs')
+    for (const t of selected) params.append('trait', t)
+    const res = await fetch(`${API}/search/traits?${params}`)
     return res.json()
   }, [])
 
@@ -85,7 +98,11 @@ function SearchPanel({ onSelect, mode, onModeChange }) {
       <div style={styles.searchHeader}>
         <h2 style={{ margin: '0 0 8px' }}>pfsrd2-display</h2>
         <ModeToggle mode={mode} onChange={onModeChange} />
-        <CreatureSearch search={searchCreatures} onSelect={onSelect} />
+        <CreatureSearch
+          search={searchCreatures}
+          suggestTraits={suggestCreatureTraits}
+          onSelect={onSelect}
+        />
       </div>
     </div>
   )
@@ -95,12 +112,35 @@ function SearchPanel({ onSelect, mode, onModeChange }) {
 // Reference wiring for the library's ItemSearch: the harness owns the data (a
 // suggest across the item types), the library owns the UX. The picked item is
 // fetched full and rendered with the library's ItemCard.
+const ITEM_TYPES = ['equipment', 'weapons', 'armor', 'shields']
+
 function ItemPanel({ onSelect, mode, onModeChange }) {
-  const searchItems = useCallback(async (query) => {
+  const searchItems = useCallback(async (query, filters) => {
     const params = new URLSearchParams({ q: query, limit: '15' })
-    for (const t of ['equipment', 'weapons', 'armor', 'shields']) params.append('type', t)
+    for (const t of ITEM_TYPES) params.append('type', t)
+    if (filters?.traits?.length) params.set('traits', filters.traits.join(','))
+    if (filters?.category) params.set('category', filters.category)
+    if (filters?.subcategory) params.set('subcategory', filters.subcategory)
     const res = await fetch(`${API}/search/suggest/unified?${params}`)
     return res.json()
+  }, [])
+
+  const suggestItemTraits = useCallback(async (prefix, selected) => {
+    const params = new URLSearchParams({ limit: '10' })
+    if (prefix) params.set('q', prefix)
+    for (const t of ITEM_TYPES) params.append('type', t)
+    for (const t of selected) params.append('trait', t)
+    const res = await fetch(`${API}/search/traits?${params}`)
+    return res.json()
+  }, [])
+
+  // Resolve the category -> subcategories map for the cascading dropdowns.
+  const loadItemFacets = useCallback(async () => {
+    const params = new URLSearchParams()
+    for (const t of ITEM_TYPES) params.append('type', t)
+    const res = await fetch(`${API}/search/facets?${params}`)
+    const data = await res.json()
+    return data.categories
   }, [])
 
   return (
@@ -108,7 +148,12 @@ function ItemPanel({ onSelect, mode, onModeChange }) {
       <div style={styles.searchHeader}>
         <h2 style={{ margin: '0 0 8px' }}>pfsrd2-display</h2>
         <ModeToggle mode={mode} onChange={onModeChange} />
-        <ItemSearch search={searchItems} onSelect={onSelect} />
+        <ItemSearch
+          search={searchItems}
+          suggestTraits={suggestItemTraits}
+          loadFacets={loadItemFacets}
+          onSelect={onSelect}
+        />
       </div>
     </div>
   )

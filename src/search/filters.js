@@ -1,0 +1,202 @@
+import React, { useEffect, useRef, useState } from 'react'
+import PropTypes from 'prop-types'
+
+// Filter controls for the library type-aheads. Like TypeAhead, the CONSUMER owns
+// the data (the fetch to /search/traits and /search/facets, with auth/URL/types);
+// the library owns the UX. Both are optional — a search component renders a filter
+// only when its data callback is supplied.
+
+// TraitChips is a chip-style trait filter with a co-occurrence typeahead. As you
+// type, `suggest(prefix, selected)` returns the traits that still narrow the
+// current selection (the "filtered by what's already selected" behavior lives in
+// the API). Enter (or clicking an option) adds a chip; chips AND together.
+export function TraitChips({ value, onChange, suggest, block, debounceMs = 200 }) {
+  const [input, setInput] = useState('')
+  const [options, setOptions] = useState([])
+  // The prefix the current `options` were fetched for — Enter only accepts the
+  // top suggestion when it's fresh for what's typed (guards a stale commit if
+  // Enter is hit mid-debounce after a fast prefix change).
+  const [optionsFor, setOptionsFor] = useState('')
+  // Options show only while the input is focused, so nothing appears unprompted
+  // on mount. Option picks use onMouseDown+preventDefault (keeps focus, matches
+  // the harness SpellCombobox), so blur can hide them without racing the click.
+  const [focused, setFocused] = useState(false)
+  // Newest suggest wins (same stale-response guard as TypeAhead).
+  const seq = useRef(0)
+  const suggestRef = useRef(suggest)
+  useEffect(() => {
+    suggestRef.current = suggest
+  }, [suggest])
+
+  // Re-suggest on prefix change AND on selection change (adding/removing a chip
+  // re-narrows the co-occurring options).
+  const selectedKey = JSON.stringify(value)
+  useEffect(() => {
+    if (!focused) return undefined
+    const mine = ++seq.current
+    const q = input.trim()
+    const timer = setTimeout(async () => {
+      try {
+        const data = await suggestRef.current(q, value)
+        if (mine === seq.current) {
+          setOptions((data || []).filter((t) => !value.includes(t)))
+          setOptionsFor(q)
+        }
+      } catch {
+        if (mine === seq.current) {
+          setOptions([])
+          setOptionsFor(q)
+        }
+      }
+    }, debounceMs)
+    return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [input, selectedKey, debounceMs, focused])
+
+  const add = (trait) => {
+    const t = (trait || '').trim()
+    if (t && !value.includes(t)) onChange([...value, t])
+    setInput('')
+    setOptions([])
+  }
+  const remove = (trait) => onChange(value.filter((t) => t !== trait))
+
+  return (
+    <div className={`${block}__filter ${block}__traits`} data-testid={`${block}-trait-filter`}>
+      {value.map((t) => (
+        <span key={t} className={`${block}__chip`} data-testid={`${block}-chip`}>
+          {t}
+          <button
+            type="button"
+            className={`${block}__chip-remove`}
+            aria-label={`remove ${t}`}
+            onClick={() => remove(t)}
+          >
+            ×
+          </button>
+        </span>
+      ))}
+      <input
+        type="text"
+        className={`${block}__chip-input`}
+        placeholder="filter by trait…"
+        value={input}
+        data-testid={`${block}-trait-input`}
+        onChange={(e) => setInput(e.target.value)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault()
+            // Commit only an API-sourced option (canonical casing), never free
+            // text — the trait vocabulary comes from the API. An exact case-
+            // insensitive match always wins; otherwise the top suggestion, but
+            // only when it's fresh for what's typed (else no-op).
+            const typed = input.trim()
+            const exact = options.find((o) => o.toLowerCase() === typed.toLowerCase())
+            const pick = exact || (optionsFor === typed ? options[0] : undefined)
+            if (pick) add(pick)
+          } else if (e.key === 'Backspace' && input === '' && value.length) {
+            remove(value[value.length - 1]) // backspace on empty removes last chip
+          }
+        }}
+      />
+      {focused && options.length > 0 && (
+        <div className={`${block}__chip-options`}>
+          {options.map((o) => (
+            <div
+              key={o}
+              className={`${block}__chip-option`}
+              data-testid={`${block}-trait-option`}
+              onMouseDown={(e) => {
+                e.preventDefault() // keep input focus; commit before blur
+                add(o)
+              }}
+            >
+              {o}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+TraitChips.propTypes = {
+  value: PropTypes.arrayOf(PropTypes.string).isRequired,
+  onChange: PropTypes.func.isRequired,
+  // suggest(prefix, selected) -> Promise<string[]>. Consumer-owned.
+  suggest: PropTypes.func.isRequired,
+  block: PropTypes.string.isRequired,
+  debounceMs: PropTypes.number,
+}
+
+// FacetSelect renders cascading category → subcategory dropdowns for item search.
+// `loadFacets()` resolves the {category: [subcategories]} map (consumer fetches
+// /search/facets and unwraps `categories`). Picking a category resets the
+// subcategory and repopulates its options.
+export function FacetSelect({ loadFacets, category, subcategory, onCategory, onSubcategory, block }) {
+  const [facets, setFacets] = useState(null)
+  // Hold loadFacets in a ref (like TypeAhead's searchRef) so an unmemoized
+  // callback prop can't refetch on every render. Load once on mount.
+  const loadRef = useRef(loadFacets)
+  useEffect(() => {
+    loadRef.current = loadFacets
+  }, [loadFacets])
+  useEffect(() => {
+    let alive = true
+    loadRef.current()
+      .then((f) => alive && setFacets(f || {}))
+      .catch(() => alive && setFacets({}))
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  const categories = facets ? Object.keys(facets).sort() : []
+  const subcategories = (facets && category && facets[category]) || []
+
+  return (
+    <div className={`${block}__filter ${block}__facets`} data-testid={`${block}-facet-filter`}>
+      <select
+        className={`${block}__facet-select`}
+        aria-label="category"
+        value={category}
+        data-testid={`${block}-category`}
+        onChange={(e) => onCategory(e.target.value)}
+      >
+        <option value="">All categories</option>
+        {categories.map((c) => (
+          <option key={c} value={c}>
+            {c}
+          </option>
+        ))}
+      </select>
+      <select
+        className={`${block}__facet-select`}
+        aria-label="subcategory"
+        value={subcategory}
+        disabled={!category || subcategories.length === 0}
+        data-testid={`${block}-subcategory`}
+        onChange={(e) => onSubcategory(e.target.value)}
+      >
+        <option value="">All subcategories</option>
+        {subcategories.map((s) => (
+          <option key={s} value={s}>
+            {s}
+          </option>
+        ))}
+      </select>
+    </div>
+  )
+}
+
+FacetSelect.propTypes = {
+  // loadFacets() -> Promise<{category: string[]}>. Consumer-owned.
+  loadFacets: PropTypes.func.isRequired,
+  category: PropTypes.string.isRequired,
+  subcategory: PropTypes.string.isRequired,
+  onCategory: PropTypes.func.isRequired,
+  onSubcategory: PropTypes.func.isRequired,
+  block: PropTypes.string.isRequired,
+}

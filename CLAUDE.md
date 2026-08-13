@@ -69,6 +69,40 @@ import '@521studios/pfsrd2-display/style.css'
 />
 ```
 
+## Search & Filtering
+
+`CreatureSearch` / `ItemSearch` are debounced type-aheads. The **consumer owns the
+data** (`search`, and the optional filter callbacks — auth/URL/types live in the
+app); the library owns the UX. See `dev/harness.jsx` for the reference wiring
+against pfsrd2-data-api.
+
+```jsx
+import { CreatureSearch, ItemSearch } from '@521studios/pfsrd2-display'
+
+// search(query, filters) -> Promise<result[]>. filters is forwarded so the
+// consumer builds the API params. Filter controls are opt-in: omit a callback
+// and that control isn't rendered.
+<CreatureSearch
+  search={(q, { traits }) => fetchSuggest(q, { traits })}
+  onSelect={(r) => {/* ... */}}
+  suggestTraits={(prefix, selected) => fetchTraits(prefix, selected)} // → trait chips
+/>
+
+<ItemSearch
+  search={(q, { traits, category, subcategory }) => fetchSuggest(q, { traits, category, subcategory })}
+  onSelect={(it) => {/* ... */}}
+  suggestTraits={(prefix, selected) => fetchTraits(prefix, selected)}  // → trait chips
+  loadFacets={() => fetchFacets()}  // Promise<{category: string[]}> → category/subcategory selects
+/>
+```
+
+- `suggestTraits(prefix, selected)` backs a co-occurrence chip typeahead — return
+  only traits that still narrow the current selection (`/search/traits`).
+- `loadFacets()` returns the `{category: [subcategories]}` map (`/search/facets`,
+  unwrap `.categories`) for the cascading dropdowns.
+- Filter BEM classes to override: `.CreatureSearch__chip` / `__chip-input` /
+  `__chip-option`, `.ItemSearch__facet-select` (+ the same `__chip*` set).
+
 ## Template Change Highlighting
 
 When `patches` is provided (merged `applied_patches` from the template API), modified values are visually highlighted:

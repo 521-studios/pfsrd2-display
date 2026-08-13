@@ -446,6 +446,109 @@
   font-size: 13px;
 }
 
+/* Search filters — trait chips + cascading category/subcategory dropdowns.
+   Neutral defaults; consuming apps override the per-block classes freely. */
+.ItemSearch__filters {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.CreatureSearch__filter,
+.ItemSearch__filter {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Facets are item-only (CreatureSearch has no category/subcategory). */
+.ItemSearch__facets {
+  gap: 8px;
+}
+
+.ItemSearch__facet-select {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid #555;
+  border-radius: 4px;
+  background: #1a1a1a;
+  color: #e0e0e0;
+  font-size: 13px;
+}
+
+.ItemSearch__facet-select:disabled {
+  opacity: 0.5;
+}
+
+.CreatureSearch__chip,
+.ItemSearch__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  background: #3a2a12;
+  border: 1px solid #f79639;
+  border-radius: 12px;
+  color: #f79639;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.CreatureSearch__chip-remove,
+.ItemSearch__chip-remove {
+  padding: 0;
+  border: none;
+  background: none;
+  color: #f79639;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.CreatureSearch__chip-input,
+.ItemSearch__chip-input {
+  flex: 1;
+  min-width: 80px;
+  padding: 4px 6px;
+  border: 1px solid #555;
+  border-radius: 4px;
+  background: #1a1a1a;
+  color: #e0e0e0;
+  font-size: 13px;
+  outline: none;
+}
+
+.CreatureSearch__chip-options,
+.ItemSearch__chip-options {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  margin-top: 2px;
+  background: #1a1a1a;
+  border: 1px solid #555;
+  border-radius: 4px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.CreatureSearch__chip-option,
+.ItemSearch__chip-option {
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.CreatureSearch__chip-option:hover,
+.ItemSearch__chip-option:hover {
+  background: #333;
+}
+
 /* TemplatePicker — library control for applying/stacking templates.
    Neutral defaults; consuming apps override .TemplatePicker__* freely. */
 .TemplatePicker {
