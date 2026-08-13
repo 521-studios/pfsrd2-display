@@ -76,56 +76,63 @@ const runeItem = {
   }
 }
 
+const checkedCount = (html) => (html.match(/aria-checked="true"/g) || []).length
+
 describe('ItemCard variants (render)', () => {
-  it('renders a variant selector with one option per variant', () => {
+  it('stacks every version (book-style) with its own level + price', () => {
     const html = renderToStaticMarkup(<ItemCard data={runeItem} onVariantChange={() => {}} />)
-    assert.match(html, /aria-label="variant"/)
-    assert.match(html, /Striking \(Greater\) \(Lvl 12\)/)
-    assert.match(html, /Striking \(Major\) \(Lvl 19\)/)
+    // the base header shows the family name + lowest level with a "+"
+    assert.match(html, /Item 4\+/)
+    // and every version is listed
+    for (const [name, price] of [
+      ['Striking', '65 gp'],
+      ['Striking \\(Greater\\)', '1,065 gp'],
+      ['Striking \\(Major\\)', '31,065 gp']
+    ]) {
+      assert.match(html, new RegExp(name))
+      assert.match(html, new RegExp(price))
+    }
   })
 
-  it('shows the base variant (index 0) by default: level 4 / 65 gp', () => {
-    const html = renderToStaticMarkup(<ItemCard data={runeItem} />)
-    assert.match(html, /Item 4/)
-    assert.match(html, /65 gp/)
-    assert.doesNotMatch(html, /31,065 gp/)
+  it('is a keyboard radiogroup with a radio per version when selectable', () => {
+    const html = renderToStaticMarkup(<ItemCard data={runeItem} onVariantChange={() => {}} />)
+    assert.match(html, /role="radiogroup"/)
+    assert.equal((html.match(/role="radio"/g) || []).length, 3)
   })
 
-  it('renders the selected variant name/level/price when variant is set', () => {
-    const html = renderToStaticMarkup(<ItemCard data={runeItem} variant={2} onVariantChange={() => {}} />)
-    // header shows the Major variant
-    assert.match(html, /Striking \(Major\)/)
-    assert.match(html, /Item 19/)
-    assert.match(html, /31,065 gp/)
-    assert.doesNotMatch(html, /Item 4</) // not the base level in the header
+  it('marks exactly the selected version, and none when nothing is picked', () => {
+    const picked = renderToStaticMarkup(<ItemCard data={runeItem} variant={2} onVariantChange={() => {}} />)
+    assert.equal(checkedCount(picked), 1) // only the Major row
+    assert.match(picked, /aria-checked="true"[\s\S]*Striking \(Major\)/)
+
+    const none = renderToStaticMarkup(<ItemCard data={runeItem} variant={-1} onVariantChange={() => {}} />)
+    assert.equal(checkedCount(none), 0) // require-a-pick: nothing selected by default
   })
 
-  it('has no selector for a plain item (no variants)', () => {
+  it('renders a read-only list (not a radiogroup) without onVariantChange, still showing every version', () => {
+    const html = renderToStaticMarkup(<ItemCard data={runeItem} variant={1} />)
+    assert.doesNotMatch(html, /role="radiogroup"/)
+    assert.doesNotMatch(html, /role="radio"/)
+    assert.match(html, /role="list"/)
+    assert.match(html, /Item 12/) // the Greater version still renders
+    assert.match(html, /Item 19/) // and Major — all versions shown as reference
+  })
+
+  it('has no version list for a plain item (no variants)', () => {
     const html = renderToStaticMarkup(<ItemCard data={item} />)
-    assert.doesNotMatch(html, /aria-label="variant"/)
-  })
-
-  it('clamps an out-of-range variant index back to the base rather than crashing', () => {
-    const html = renderToStaticMarkup(<ItemCard data={runeItem} variant={99} onVariantChange={() => {}} />)
-    assert.match(html, /Item 4/) // fell back to base
+    assert.doesNotMatch(html, /Monster__variants/)
   })
 })
 
-describe('ItemCard variants — safety + read-only', () => {
-  it('a masked item with variants leaks no variant name/level/price and shows no selector', () => {
+describe('ItemCard variants — masking safety', () => {
+  it('a masked item with variants leaks no version name/level/price and shows no radiogroup', () => {
     const html = renderToStaticMarkup(
       <ItemCard data={runeItem} masked maskLabel='mystery rune' variant={2} onVariantChange={() => {}} />
     )
     assert.match(html, /mystery rune/)
-    assert.doesNotMatch(html, /Striking/) // no base OR variant name
-    assert.doesNotMatch(html, /31,065 gp/) // no variant price
-    assert.doesNotMatch(html, /Item 19/) // no variant level
-    assert.doesNotMatch(html, /aria-label="variant"/) // no selector
-  })
-
-  it('renders no interactive selector without onVariantChange, but still shows the chosen variant', () => {
-    const html = renderToStaticMarkup(<ItemCard data={runeItem} variant={1} />)
-    assert.doesNotMatch(html, /aria-label="variant"/) // no dead/inert selector
-    assert.match(html, /Item 12/) // the Greater variant still renders (read-only)
+    assert.doesNotMatch(html, /Striking/) // no base OR version name
+    assert.doesNotMatch(html, /31,065 gp/) // no version price
+    assert.doesNotMatch(html, /Item 19/) // no version level
+    assert.doesNotMatch(html, /role="radiogroup"/)
   })
 })
