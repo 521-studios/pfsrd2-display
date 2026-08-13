@@ -142,8 +142,10 @@ test('changing category resets the subcategory filter', async ({ page }) => {
   await category.selectOption('Armor')
   await expect(sub).toHaveValue('')
 
-  // Back to Runes with no subcategory → Striking reappears (the reset dropped the
-  // constraint, not merely the select's displayed value).
+  // Back under Runes, "Fundamental Weapon Runes" IS a valid option again, so a
+  // failed reset would surface here as that stale value — toHaveValue('') is the
+  // real proof the subcategory was cleared. (Striking is itself a Fundamental
+  // Weapon Rune, so its visibility is only a sanity check that search still runs.)
   await category.selectOption('Runes')
   await expect(sub).toHaveValue('')
   await expect(

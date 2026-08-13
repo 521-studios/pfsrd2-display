@@ -13,6 +13,10 @@ import PropTypes from 'prop-types'
 export function TraitChips({ value, onChange, suggest, block, debounceMs = 200 }) {
   const [input, setInput] = useState('')
   const [options, setOptions] = useState([])
+  // The prefix the current `options` were fetched for — Enter only accepts the
+  // top suggestion when it's fresh for what's typed (guards a stale commit if
+  // Enter is hit mid-debounce after a fast prefix change).
+  const [optionsFor, setOptionsFor] = useState('')
   // Options show only while the input is focused, so nothing appears unprompted
   // on mount. Option picks use onMouseDown+preventDefault (keeps focus, matches
   // the harness SpellCombobox), so blur can hide them without racing the click.
@@ -30,12 +34,19 @@ export function TraitChips({ value, onChange, suggest, block, debounceMs = 200 }
   useEffect(() => {
     if (!focused) return undefined
     const mine = ++seq.current
+    const q = input.trim()
     const timer = setTimeout(async () => {
       try {
-        const data = await suggestRef.current(input.trim(), value)
-        if (mine === seq.current) setOptions((data || []).filter((t) => !value.includes(t)))
+        const data = await suggestRef.current(q, value)
+        if (mine === seq.current) {
+          setOptions((data || []).filter((t) => !value.includes(t)))
+          setOptionsFor(q)
+        }
       } catch {
-        if (mine === seq.current) setOptions([])
+        if (mine === seq.current) {
+          setOptions([])
+          setOptionsFor(q)
+        }
       }
     }, debounceMs)
     return () => clearTimeout(timer)
@@ -78,10 +89,12 @@ export function TraitChips({ value, onChange, suggest, block, debounceMs = 200 }
           if (e.key === 'Enter') {
             e.preventDefault()
             // Commit only an API-sourced option (canonical casing), never free
-            // text — the trait vocabulary comes from the API. Exact case-
-            // insensitive match wins, else the top suggestion; no-op if none.
-            const typed = input.trim().toLowerCase()
-            const pick = options.find((o) => o.toLowerCase() === typed) || options[0]
+            // text — the trait vocabulary comes from the API. An exact case-
+            // insensitive match always wins; otherwise the top suggestion, but
+            // only when it's fresh for what's typed (else no-op).
+            const typed = input.trim()
+            const exact = options.find((o) => o.toLowerCase() === typed.toLowerCase())
+            const pick = exact || (optionsFor === typed ? options[0] : undefined)
             if (pick) add(pick)
           } else if (e.key === 'Backspace' && input === '' && value.length) {
             remove(value[value.length - 1]) // backspace on empty removes last chip
