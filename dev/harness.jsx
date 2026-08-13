@@ -165,11 +165,11 @@ function ItemPanel({ onSelect, mode, onModeChange }) {
 function ItemDetail({ item }) {
   const [data, setData] = useState(null)
   const [error, setError] = useState(null)
-  const [variant, setVariant] = useState(0)
+  const [variant, setVariant] = useState(-1)
 
   useEffect(() => {
     setError(null)
-    setVariant(0) // reset the variant selection when the item changes
+    setVariant(-1) // reset the variant selection when the item changes
     if (!item) {
       setData(null)
       return

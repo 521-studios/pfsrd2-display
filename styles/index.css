@@ -609,13 +609,77 @@
   margin-left: 4px;
 }
 
-/* ItemCard variant selector (e.g. a rune's Striking / Greater / Major). */
-.Monster__variants { margin: 0.25rem 0; }
-.Monster__variant-select {
-  font-size: 0.85rem;
-  padding: 0.15rem 0.3rem;
-  background: #1a1a1a;
-  color: #e0e0e0;
-  border: 1px solid #555;
+/* ItemCard versions — an item with variants (a rune's Striking / Greater / Major,
+   Armor Potency +1/+2/+3) reads like the book: every version stacked, each with
+   its own level, price, and text. Selectable rows form a radiogroup when the
+   consumer passes onVariantChange; otherwise they're a read-only reference list. */
+.Monster__variants {
+  margin: 0.5rem 0 0.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.Monster__variant {
+  display: flex;
+  gap: 0.6rem;
+  padding: 0.5rem 0.7rem;
+  background: #221d16;
+  border: 1px solid #3a332a;
+  border-left: 3px solid #3a332a;
   border-radius: 0.25rem;
+}
+.Monster__variant--selectable { cursor: pointer; }
+.Monster__variant--selectable:hover {
+  border-color: #4d4437;
+  border-left-color: #b0a894;
+}
+.Monster__variant--selectable:focus-visible {
+  outline: 2px solid #F79639;
+  outline-offset: 2px;
+}
+.Monster__variant--selected {
+  background: rgba(247, 150, 57, 0.12);
+  border-color: rgba(247, 150, 57, 0.45);
+  border-left-color: #F79639;
+}
+/* the ○ / ● selection dot */
+.Monster__variant-radio {
+  flex: 0 0 auto;
+  align-self: center;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border: 2px solid #b0a894;
+  position: relative;
+}
+.Monster__variant--selected .Monster__variant-radio { border-color: #F79639; }
+.Monster__variant--selected .Monster__variant-radio::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: #F79639;
+}
+.Monster__variant-main { flex: 1 1 auto; min-width: 0; }
+.Monster__variant-header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+}
+.Monster__variant-name {
+  flex: 1 1 auto;
+  font-weight: bold;
+  color: #e8c882;
+}
+.Monster__variant-level {
+  flex: 0 0 auto;
+  color: #e8c882;
+  font-variant-numeric: tabular-nums;
+}
+.Monster__variant-price { margin-top: 2px; line-height: 1.3em; }
+.Monster__variant-text {
+  margin-top: 2px;
+  line-height: 1.4em;
+  color: #bbb;
+  font-style: italic;
 }

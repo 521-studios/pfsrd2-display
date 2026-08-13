@@ -1,10 +1,10 @@
 import { test, expect } from '@playwright/test'
 import { trackApiErrors } from './helpers/harness.js'
 
-// A rune stores its variants in stat_block.variants (Striking / Greater / Major,
-// each its own level + price). ItemCard renders a variant selector; switching it
-// re-renders the header level and the price.
-test('switching an item variant updates the level and price', async ({ page }) => {
+// A rune stores its versions in stat_block.variants (Striking / Greater / Major,
+// each its own level + price). ItemCard reads like the book: the shared entry
+// then every version stacked. You lock one in by selecting it (mouse or keyboard).
+test('an item with versions stacks them and locks one in on select', async ({ page }) => {
   const apiErrors = trackApiErrors(page)
   await page.goto('/', { waitUntil: 'domcontentloaded' })
 
@@ -15,22 +15,37 @@ test('switching an item variant updates the level and price', async ({ page }) =
   await striking.click()
 
   const card = page.getByTestId('item-detail')
-  const select = card.locator('.Monster__variant-select')
-  await expect(select).toBeVisible()
+  // Book-style header: family name + the lowest level with a "+".
+  await expect(card.locator('.Monster__level')).toContainText('4+')
 
-  // Base variant (Striking): level 4, 65 gp.
-  await expect(card.locator('.Monster__level')).toContainText('4')
-  await expect(card.locator('.Monster__price')).toContainText('65 gp')
+  // Every version is stacked in a radiogroup; nothing selected yet (require a pick).
+  await expect(card.locator('.Monster__variants[role="radiogroup"]')).toBeVisible()
+  await expect(card.locator('.Monster__variant')).toHaveCount(3)
+  await expect(card.locator('.Monster__variant--selected')).toHaveCount(0)
 
-  // Switch to the Greater variant (option value = variant index 1): level 12.
-  await select.selectOption('1')
-  await expect(card.locator('.Monster__level')).toContainText('12')
-  await expect(card.locator('.Monster__price')).toContainText('1,065 gp')
+  // Each version shows its own level + price inline.
+  const greater = card.locator('.Monster__variant', { hasText: 'Striking (Greater)' })
+  await expect(greater).toContainText('Item 12')
+  await expect(greater).toContainText('1,065 gp')
+  const major = card.locator('.Monster__variant', { hasText: 'Striking (Major)' })
+  await expect(major).toContainText('Item 19')
+  await expect(major).toContainText('31,065 gp')
 
-  // Switch to Major (index 2): level 19, 31,065 gp.
-  await select.selectOption('2')
-  await expect(card.locator('.Monster__level')).toContainText('19')
-  await expect(card.locator('.Monster__price')).toContainText('31,065 gp')
+  // Click Greater → it locks in (exactly one selected).
+  await greater.click()
+  await expect(greater).toHaveAttribute('aria-checked', 'true')
+  await expect(greater).toHaveClass(/Monster__variant--selected/)
+  await expect(card.locator('.Monster__variant--selected')).toHaveCount(1)
+
+  // Selecting Major moves the lock.
+  await major.click()
+  await expect(major).toHaveAttribute('aria-checked', 'true')
+  await expect(greater).toHaveAttribute('aria-checked', 'false')
+
+  // Keyboard: arrow-key navigation moves the lock back.
+  await major.press('ArrowUp')
+  await expect(greater).toHaveAttribute('aria-checked', 'true')
+  await expect(card.locator('.Monster__variant--selected')).toHaveCount(1)
 
   expect(apiErrors, 'no pfsrd2 API call should 4xx/5xx').toEqual([])
 })
