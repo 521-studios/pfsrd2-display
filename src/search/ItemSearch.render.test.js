@@ -54,3 +54,14 @@ describe('ItemSearch (render)', () => {
     assert.match(html, /aria-label="subcategory" disabled=""/)
   })
 })
+
+describe('ItemSearch level filter (render)', () => {
+  const noop = () => {}
+  it('shows the level inputs when levelFilter is set (and not otherwise)', () => {
+    const bare = renderToStaticMarkup(<ItemSearch search={noop} onSelect={noop} />)
+    assert.doesNotMatch(bare, /ItemSearch-level-min/)
+    const withLevel = renderToStaticMarkup(<ItemSearch search={noop} onSelect={noop} levelFilter />)
+    assert.match(withLevel, /data-testid="ItemSearch-level-min"/)
+    assert.match(withLevel, /data-testid="ItemSearch-level-max"/)
+  })
+})

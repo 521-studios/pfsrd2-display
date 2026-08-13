@@ -204,3 +204,41 @@ FacetSelect.propTypes = {
   onSubcategory: PropTypes.func.isRequired,
   block: PropTypes.string.isRequired,
 }
+
+// LevelRange is an inclusive min/max level filter (two number inputs). Needs no
+// data callback — the values flow through `filters` and the consumer forwards
+// them (level_min/level_max) to the API. Blank bounds are open-ended.
+export function LevelRange({ min, max, onMin, onMax, block }) {
+  return (
+    <div className={`${block}__filter ${block}__level`} data-testid={`${block}-level-filter`}>
+      <span className={`${block}__level-label`}>Level</span>
+      <input
+        type="number"
+        className={`${block}__level-input`}
+        aria-label="min level"
+        placeholder="min"
+        value={min}
+        data-testid={`${block}-level-min`}
+        onChange={(e) => onMin(e.target.value)}
+      />
+      <span className={`${block}__level-dash`} aria-hidden="true">–</span>
+      <input
+        type="number"
+        className={`${block}__level-input`}
+        aria-label="max level"
+        placeholder="max"
+        value={max}
+        data-testid={`${block}-level-max`}
+        onChange={(e) => onMax(e.target.value)}
+      />
+    </div>
+  )
+}
+
+LevelRange.propTypes = {
+  min: PropTypes.string.isRequired,
+  max: PropTypes.string.isRequired,
+  onMin: PropTypes.func.isRequired,
+  onMax: PropTypes.func.isRequired,
+  block: PropTypes.string.isRequired,
+}

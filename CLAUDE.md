@@ -93,6 +93,7 @@ import { CreatureSearch, ItemSearch } from '@521studios/pfsrd2-display'
   onSelect={(it) => {/* ... */}}
   suggestTraits={(prefix, selected, facet) => fetchTraits(prefix, selected, facet)}  // → trait chips
   loadFacets={() => fetchFacets()}  // Promise<{category: string[]}> → category/subcategory selects
+  levelFilter  // shows min/max level inputs; filters carry levelMin/levelMax
 />
 ```
 
@@ -102,8 +103,12 @@ import { CreatureSearch, ItemSearch } from '@521studios/pfsrd2-display'
   so suggestions co-occur within it too; `CreatureSearch` calls it with two args.
 - `loadFacets()` returns the `{category: [subcategories]}` map (`/search/facets`,
   unwrap `.categories`) for the cascading dropdowns.
+- `levelFilter` (bool) shows inclusive min/max level number inputs (no callback —
+  the values flow through `filters` as `levelMin`/`levelMax`); works on both
+  CreatureSearch and ItemSearch.
 - Filter BEM classes to override: `.CreatureSearch__chip` / `__chip-input` /
-  `__chip-option`, `.ItemSearch__facet-select` (+ the same `__chip*` set).
+  `__chip-option`, `.ItemSearch__facet-select`, `.*__level-input` (+ the same
+  `__chip*` set).
 
 ## Template Change Highlighting
 
