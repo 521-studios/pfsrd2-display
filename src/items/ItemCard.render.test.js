@@ -101,25 +101,39 @@ describe('ItemCard variants (render)', () => {
     assert.equal((html.match(/role="radio"/g) || []).length, 3)
   })
 
-  it('marks exactly the selected version, and none when nothing is picked', () => {
-    const picked = renderToStaticMarkup(<ItemCard data={runeItem} variant={2} onVariantChange={() => {}} />)
-    assert.equal(checkedCount(picked), 1) // only the Major row
-    assert.match(picked, /aria-checked="true"[\s\S]*Striking \(Major\)/)
-
-    const none = renderToStaticMarkup(<ItemCard data={runeItem} variant={-1} onVariantChange={() => {}} />)
-    assert.equal(checkedCount(none), 0) // require-a-pick: nothing selected by default
+  it('shows the full choice (nothing checked) until a version is picked', () => {
+    const html = renderToStaticMarkup(<ItemCard data={runeItem} variant={-1} onVariantChange={() => {}} />)
+    assert.match(html, /role="radiogroup"/)
+    assert.equal(checkedCount(html), 0) // require-a-pick
+    assert.doesNotMatch(html, /Monster__variant-change/) // nothing to reopen yet
   })
 
-  it('renders a read-only list (not a radiogroup) without onVariantChange, still showing every version', () => {
+  it('locks in: collapses to just the chosen version (as the item) with a change control', () => {
+    const html = renderToStaticMarkup(<ItemCard data={runeItem} variant={2} onVariantChange={() => {}} />)
+    assert.match(html, /Striking \(Major\)/) // header = the chosen version
+    assert.match(html, /Item 19/) // its own level (no "+")
+    assert.match(html, /31,065 gp/) // its price
+    assert.doesNotMatch(html, /Item 4\+/) // not the family header
+    assert.doesNotMatch(html, /role="radiogroup"/) // collapsed — no list
+    assert.doesNotMatch(html, /Striking \(Greater\)/) // other versions hidden
+    assert.match(html, /Monster__variant-change/) // a way back to the choice
+    assert.match(html, />change version</)
+  })
+
+  it('read-only: a chosen version collapses to just it, with no change control', () => {
     const html = renderToStaticMarkup(<ItemCard data={runeItem} variant={1} />)
-    assert.doesNotMatch(html, /role="radiogroup"/)
-    assert.doesNotMatch(html, /role="radio"/)
+    assert.match(html, /Striking \(Greater\)/)
+    assert.match(html, /Item 12/)
+    assert.doesNotMatch(html, /role="radiogroup"/) // collapsed
+    assert.doesNotMatch(html, /Monster__variant-change/) // not selectable → no reopen
+    assert.doesNotMatch(html, /Striking \(Major\)/) // others hidden
+  })
+
+  it('read-only with no pick lists every version (reference)', () => {
+    const html = renderToStaticMarkup(<ItemCard data={runeItem} variant={-1} />)
     assert.match(html, /role="list"/)
-    assert.match(html, /Item 12/) // the Greater version still renders
-    assert.match(html, /Item 19/) // and Major — all versions shown as reference
-    // a saved pick still highlights in the read-only view
-    assert.match(html, /Monster__variant--selected[\s\S]*Striking \(Greater\)/)
-    assert.equal(checkedCount(html), 0) // but no radio semantics (not interactive)
+    assert.match(html, /Item 12/)
+    assert.match(html, /Item 19/)
   })
 
   it('marks the radiogroup required and labels each radio by its version name only', () => {
@@ -146,6 +160,26 @@ describe('ItemCard variants (render)', () => {
     // the runeItem versions carry no text → no per-version text block at all
     const withoutHtml = renderToStaticMarkup(<ItemCard data={runeItem} onVariantChange={() => {}} />)
     assert.doesNotMatch(withoutHtml, /Monster__variant-text/)
+  })
+
+  it('locked: renders the chosen version rules text alongside the shared flavor', () => {
+    const withText = {
+      name: 'Armor Potency',
+      stat_block: {
+        level: 5,
+        traits: [{ name: 'Magical', classes: ['trait'] }],
+        text: 'Magic wards deflect attacks.',
+        variants: [
+          { name: 'Armor Potency (+1)', level: 5, price: { text: '160 gp' } },
+          { name: 'Armor Potency (+2)', level: 11, price: { text: '1,060 gp' }, text: 'Increase the item bonus to AC by 2.' }
+        ]
+      }
+    }
+    const html = renderToStaticMarkup(<ItemCard data={withText} variant={1} onVariantChange={() => {}} />)
+    assert.match(html, /Armor Potency \(\+2\)/) // collapsed to the chosen version
+    assert.match(html, /Magic wards deflect attacks/) // shared flavor still shows
+    assert.match(html, /item bonus to AC by 2/) // the +2 version's own text
+    assert.doesNotMatch(html, /role="radiogroup"/) // collapsed
   })
 
   it('derives the header level from the versions when the base level is absent', () => {
