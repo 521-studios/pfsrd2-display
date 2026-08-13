@@ -41,6 +41,10 @@ describe('itemPrice', () => {
     assert.strictEqual(itemPrice(wingsuit, 'Nope').value, 625)
     assert.strictEqual(itemPrice(wingsuit, 9).value, 625)
   })
+  it('the -1 sentinel (ItemCard non-locked default) means base', () => {
+    assert.strictEqual(itemPrice(wingsuit, -1).value, 625)
+    assert.strictEqual(itemPrice(striking, -1).text, '-') // base "Varies" object
+  })
   it('keeps the raw price object incl. text (so display can show "Varies")', () => {
     assert.strictEqual(itemPrice(striking).text, '-') // base "Varies" object, value null
   })
@@ -58,19 +62,32 @@ describe('priceToCp / itemPriceCp', () => {
     assert.strictEqual(priceToCp({ value: 2, currency: 'cp' }), 2)
     assert.strictEqual(priceToCp({ value: 1, currency: 'pp' }), 1000)
   })
-  it('defaults an unknown currency to gp', () => {
-    assert.strictEqual(priceToCp({ value: 1, currency: 'zorkmid' }), 100)
+  it('returns null for an unknown or missing currency (flag, do not guess gp)', () => {
+    assert.strictEqual(priceToCp({ value: 1, currency: 'zorkmid' }), null)
+    assert.strictEqual(priceToCp({ value: 5 }), null) // no currency
   })
   it('returns null for no fixed price (missing or value null)', () => {
     assert.strictEqual(priceToCp(null), null)
     assert.strictEqual(priceToCp({ value: null, text: '-' }), null)
     assert.strictEqual(priceToCp({ currency: 'gp' }), null)
   })
+  it('value 0 is a real free item (0 cp), not conflated with "no price"', () => {
+    assert.strictEqual(priceToCp({ value: 0, currency: 'gp' }), 0)
+  })
   it('itemPriceCp sums a variant by name; null for the "Varies" base', () => {
     assert.strictEqual(itemPriceCp(striking, 'Striking (Greater)'), 106500)
     assert.strictEqual(itemPriceCp(wingsuit), 62500)
     assert.strictEqual(itemPriceCp(rope), 50)
     assert.strictEqual(itemPriceCp(striking), null) // base value null -> flag, don't sum
+  })
+  it('itemPriceCp flags a requested-but-unresolvable variant (does not fall back to base)', () => {
+    // A saved TreasureLine.variant renamed/removed in data must NOT silently
+    // reprice to the base item — return null so the caller flags it.
+    assert.strictEqual(itemPriceCp(wingsuit, 'No Such Variant'), null)
+    assert.strictEqual(itemPriceCp(wingsuit, 5), null) // out-of-range index
+    // But "no variant requested" still means the base price.
+    assert.strictEqual(itemPriceCp(wingsuit, -1), 62500)
+    assert.strictEqual(itemPriceCp(wingsuit, ''), 62500)
   })
 })
 

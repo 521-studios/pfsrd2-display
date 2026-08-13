@@ -215,3 +215,19 @@ describe('ItemCard variants — masking safety', () => {
     assert.doesNotMatch(html, /role="radiogroup"/)
   })
 })
+
+describe('ItemCard "Varies" price (render)', () => {
+  // A value:null / text:'-' price (e.g. an alchemical bomb, a rune family base)
+  // must still render its text — itemPrice keeps the price object for display,
+  // even though itemPriceCp returns null for summing. Guards the refactor from
+  // silently blanking such prices.
+  const varies = {
+    name: 'Alchemical Bomb',
+    stat_block: { level: 1, price: { value: null, text: '-' }, text: 'Boom.' }
+  }
+  it('still shows the price line for a "Varies" (value null) price', () => {
+    const html = renderToStaticMarkup(<ItemCard data={varies} />)
+    assert.match(html, /class="Monster__price"/) // price line rendered, not blanked
+    assert.match(html, /Alchemical Bomb/)
+  })
+})

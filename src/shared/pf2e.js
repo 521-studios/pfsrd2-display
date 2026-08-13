@@ -28,19 +28,37 @@ export function itemPrice(entry, variant) {
   return (chosen && chosen.price) || sb.price || null
 }
 
-// priceToCp converts a price object to integer copper, or null when there's no
-// FIXED price (missing, or value null/undefined — e.g. "Varies"). Unknown
-// currencies fall back to gp (the overwhelmingly common unit).
+// priceToCp converts a price object to integer copper, or null when it can't be
+// valued: no FIXED price (missing, or value null/undefined — e.g. "Varies"), or
+// an unknown/missing currency. Returning null rather than guessing gp keeps a
+// bad-data price from silently entering a treasure sum 10–100× off.
 export function priceToCp(price) {
   if (!price || price.value === null || price.value === undefined) return null
-  const mult = COIN_TO_CP[price.currency] ?? COIN_TO_CP.gp
+  const mult = COIN_TO_CP[price.currency]
+  if (mult === undefined) return null // unknown/missing currency — flag, don't guess
   return Math.round(price.value * mult)
 }
 
 // itemPriceCp is the summable copper value of an item's (variant's) price, or
-// null when it has no fixed price. For treasure valuation.
+// null when it can't be valued. A requested variant (non-empty name, or a >=0
+// index) that doesn't resolve — e.g. a saved TreasureLine.variant renamed or
+// removed in the data — returns null rather than silently repricing to the base
+// item (a wrong sum); "no variant requested" (-1 / '' / undefined) still means
+// the base price.
 export function itemPriceCp(entry, variant) {
+  if (variantRequested(variant)) {
+    const sb = (entry && entry.stat_block) || entry || {}
+    const variants = Array.isArray(sb.variants) ? sb.variants : []
+    if (!resolveVariant(variants, variant)) return null
+  }
   return priceToCp(itemPrice(entry, variant))
+}
+
+// variantRequested separates "the caller asked for a specific variant" (a
+// non-empty name or a non-negative index) from "no variant / base" (-1, '',
+// undefined) — so only a genuinely-unresolvable request flags in itemPriceCp.
+function variantRequested(variant) {
+  return (typeof variant === 'number' && variant >= 0) || (typeof variant === 'string' && variant !== '')
 }
 
 // coinsToCp normalizes a coin bag { cp, sp, gp, pp } to integer copper.
@@ -61,8 +79,8 @@ export function formatGp(cp) {
 }
 
 // creatureLevel reads a creature/NPC's numeric level from
-// stat_block.creature_type.level (NOT stat_block.level, which is null for
-// creatures). null when absent/non-numeric.
+// stat_block.creature_type.level. (Not stat_block.level — that key is absent for
+// creatures, so never level-check against it.) null when absent/non-numeric.
 export function creatureLevel(entry) {
   const sb = (entry && entry.stat_block) || entry || {}
   const lvl = sb.creature_type && sb.creature_type.level
