@@ -44,13 +44,19 @@ export default function TypeAhead({
     filtersRef.current = filters
   }, [filters])
   const filtersKey = filters ? JSON.stringify(filters) : ''
+  // Any active filter (a non-empty chip array, or a chosen category/subcategory)
+  // lets the search run on an empty/short query, so picking a filter populates the
+  // list without typing — the API returns matches for a filter-only query.
+  const hasActiveFilter =
+    !!filters &&
+    Object.values(filters).some((v) => (Array.isArray(v) ? v.length > 0 : Boolean(v)))
 
   useEffect(() => {
     // Bump the token BEFORE the early-return: shortening the query below minChars
     // must also invalidate any in-flight fetch, else its stale response would
     // commit results for a query the input no longer shows.
     const mine = ++seq.current
-    if (query.length < minChars) {
+    if (query.length < minChars && !hasActiveFilter) {
       setResults([])
       setLoading(false)
       return
@@ -67,7 +73,7 @@ export default function TypeAhead({
       }
     }, debounceMs)
     return () => clearTimeout(timer) // a new keystroke cancels the pending fetch
-  }, [query, minChars, debounceMs, filtersKey])
+  }, [query, minChars, debounceMs, filtersKey, hasActiveFilter])
 
   return (
     <div className={block}>
@@ -83,7 +89,7 @@ export default function TypeAhead({
       />
       <div className={`${block}__results`}>
         {loading && <div className={`${block}__status`}>Searching…</div>}
-        {!loading && query.length >= minChars && results.length === 0 && (
+        {!loading && (query.length >= minChars || hasActiveFilter) && results.length === 0 && (
           <div className={`${block}__status`}>No results</div>
         )}
         {results.map((r) => (

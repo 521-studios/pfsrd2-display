@@ -204,3 +204,22 @@ test('trait suggestions refetch after the category changes (blur → refocus)', 
 
   expect(apiErrors, 'no pfsrd2 API call should 4xx/5xx').toEqual([])
 })
+
+test('picking a filter populates the list without typing (filter-only browse)', async ({ page }) => {
+  const apiErrors = trackApiErrors(page)
+  await page.goto('/', { waitUntil: 'domcontentloaded' })
+  await page.getByTestId('mode-items').click()
+
+  // No query + no filter → the list is empty.
+  await expect(page.locator('[data-testid="item-search-result"]')).toHaveCount(0)
+
+  // Pick a category → the list populates with matching items, no typing needed.
+  await page.getByTestId('ItemSearch-category').selectOption('Runes')
+  await expect(page.locator('[data-testid="item-search-result"]').first()).toBeVisible()
+
+  // Clearing the filter (still no query) closes the list again.
+  await page.getByTestId('ItemSearch-category').selectOption('')
+  await expect(page.locator('[data-testid="item-search-result"]')).toHaveCount(0)
+
+  expect(apiErrors, 'no pfsrd2 API call should 4xx/5xx').toEqual([])
+})
