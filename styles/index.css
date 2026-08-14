@@ -1,5 +1,15 @@
 /* Monster stat block styles */
 
+/* Action-icon font (◆ actions etc.). The TTF ships in dist/fonts/ (rollup copies
+   assets/fonts/*), and this @font-face resolves relative to the extracted
+   dist/style.css — so consumers get the real glyphs instead of a fallback font
+   for .Monster__actionIcon. (The dev harness declares its own inline @font-face.) */
+@font-face {
+  font-family: 'Pathfinder2eActions';
+  src: url('./fonts/Pathfinder2eActions.ttf') format('truetype');
+  font-display: swap;
+}
+
 .Monster {
   position: relative;
   overflow: hidden;

@@ -53,6 +53,20 @@ test('subpaths resolve per the exports map AND exist on disk', () => {
   assert.ok(fileURLToPath(import.meta.resolve(`${pkg}/style.css`)).endsWith('/dist/style.css'))
 })
 
+test('shipped style.css declares @font-face for the action-icon font (m3cm)', () => {
+  // The bug: .Monster__actionIcon sets font-family 'Pathfinder2eActions' but no
+  // @font-face was shipped, so consumers rendered a fallback font for action icons.
+  // Assert the extracted CSS declares the face AND its src resolves to the packaged TTF.
+  const css = readFileSync(fileURLToPath(import.meta.resolve(`${pkg}/style.css`)), 'utf8')
+  const face = (css.match(/@font-face\s*\{[^}]*\}/g) || []).find((b) => /Pathfinder2eActions/.test(b))
+  assert.ok(face, 'no @font-face for Pathfinder2eActions in shipped style.css')
+  const url = (face.match(/url\(\s*['"]?([^'")]+)['"]?\s*\)/) || [])[1]
+  assert.ok(url && /fonts\/Pathfinder2eActions\.ttf$/.test(url), `@font-face src url unexpected: ${url}`)
+  // The url is relative to dist/style.css — confirm it points at a real file.
+  const onDisk = fileURLToPath(import.meta.resolve(`${pkg}/dist/${url.replace(/^\.\//, '')}`))
+  assert.ok(existsSync(onDisk), `@font-face src ${url} does not resolve to a real file (${onDisk})`)
+})
+
 test('main/module fallback fields point at real files', () => {
   // Node ignores main/module once exports exists, but non-exports-aware
   // tooling (webpack 4, older jest) still reads them.
