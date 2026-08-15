@@ -230,9 +230,14 @@ function ItemDetail({ item }) {
     setCustomizing(true)
     setError(null)
     try {
-      setEligibility(await fetchEligible({ get: fetchJson, itemGameId: item.game_id }))
+      // fetchJson resolves to null on a non-OK response (it doesn't throw), so guard
+      // it explicitly — otherwise the panel would dead-end on eligibility=null.
+      const elig = await fetchEligible({ get: fetchJson, itemGameId: item.game_id })
+      if (!elig) throw new Error('Could not load what can be applied to this item.')
+      setEligibility(elig)
     } catch (e) {
       setError(String(e.message || e))
+      setCustomizing(false) // restore the Customize button so the GM can retry
     }
   }, [item])
 

@@ -39,6 +39,21 @@ describe('ItemSlotPicker', () => {
     const html = renderToStaticMarkup(React.createElement(ItemSlotPicker, { eligibility: withSpells, onApply: () => {} }))
     assert.match(html, /Holds a wand spell up to rank 9/)
     assert.match(html, /excludes cantrip, ritual/)
+    // Without searchSpells wired, no search box renders.
+    assert.doesNotMatch(html, /data-testid="spell-search"/)
+  })
+
+  it('renders the spell search box + constraint_text prose when a holder wires searchSpells', () => {
+    const withSpells = {
+      ...eligibility,
+      spells: { holder: 'staff', max_rank: 4, excluded_types: [], constraint_text: 'Only *fire* spells.' },
+    }
+    const html = renderToStaticMarkup(
+      React.createElement(ItemSlotPicker, { eligibility: withSpells, onApply: () => {}, searchSpells: () => Promise.resolve([]) }),
+    )
+    assert.match(html, /data-testid="spell-search"/)
+    assert.match(html, /Only/) // constraint_text prose rendered via Markdown
+    assert.match(html, /placeholder="Search a spell…"/)
   })
 
   it('applies a single-grade rune directly with its grade level', () => {

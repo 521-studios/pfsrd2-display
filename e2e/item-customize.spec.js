@@ -55,3 +55,32 @@ test('customize: name a weapon + apply a graded rune → highlighted result', as
 
   expect(apiErrors, `no API errors: ${apiErrors.join(', ')}`).toEqual([])
 })
+
+// A spell holder (wand): the customize panel shows the holder constraints and a
+// spell typeahead; picking a spell slots it into the item and renders it.
+test('customize: slot a spell into a wand holder', async ({ page }) => {
+  const apiErrors = trackApiErrors(page)
+  await page.goto('/', { waitUntil: 'domcontentloaded' })
+
+  await page.getByTestId('mode-items').click()
+  await page.getByTestId('item-search').fill('magic wand')
+  const wand = page.locator('[data-testid="item-search-result"][data-name="Magic Wand"]').first()
+  await expect(wand).toBeVisible()
+  await wand.click()
+
+  const card = page.getByTestId('item-detail')
+  await card.getByTestId('customize').click()
+  const picker = page.getByTestId('item-slot-picker')
+  await expect(picker.getByTestId('spell-constraints')).toContainText('Holds a wand spell')
+
+  // Search a spell and slot it.
+  await picker.getByTestId('spell-search').fill('fireball')
+  const fireball = picker.getByTestId('apply-spell').filter({ hasText: 'Fireball' }).first()
+  await expect(fireball).toBeVisible()
+  await fireball.click()
+
+  await expect(card.locator('.Monster__spell-slot')).toContainText('Fireball')
+  await expect(card.locator('.Monster__changed')).toBeVisible()
+
+  expect(apiErrors, `no API errors: ${apiErrors.join(', ')}`).toEqual([])
+})

@@ -96,8 +96,9 @@ function CandidateRow({ candidate, onApply, loading }) {
   const grades = candidate.grades || []
   const graded = grades.length > 1
   const [open, setOpen] = useState(false)
-  // Default the grade step to the lowest grade (the endpoint's grade<=0 default).
-  const [grade, setGrade] = useState(graded ? grades[0].level : undefined)
+  // Default the grade step to the LOWEST grade by level (matching gradeDescriptor's
+  // "Item N+"), not grades[0] — the grades array isn't assumed to be sorted.
+  const [grade, setGrade] = useState(graded ? lowestLevel(grades) : undefined)
 
   const apply = (level) => onApply(candidate, { grade: level })
 
@@ -247,14 +248,19 @@ function SpellSection({ spells, searchSpells, onApplySpell, loading }) {
   )
 }
 
+// lowestLevel is the minimum grade level (the array isn't assumed sorted), or
+// undefined when no grade carries a level.
+function lowestLevel(grades) {
+  const levels = (grades || []).map((g) => g.level).filter((l) => l != null)
+  return levels.length ? Math.min(...levels) : undefined
+}
+
 // gradeDescriptor summarizes a candidate's grade levels: "Item 2", "Item 2+" for a
 // range, or "" when ungraded.
 function gradeDescriptor(grades) {
-  if (!grades || grades.length === 0) return ''
-  const levels = grades.map((g) => g.level).filter((l) => l != null)
-  if (levels.length === 0) return ''
-  const min = Math.min(...levels)
-  return levels.length > 1 ? `Item ${min}+` : `Item ${min}`
+  const min = lowestLevel(grades)
+  if (min === undefined) return ''
+  return grades.length > 1 ? `Item ${min}+` : `Item ${min}`
 }
 
 const candidateShape = PropTypes.shape({
