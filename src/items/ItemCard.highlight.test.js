@@ -78,4 +78,31 @@ describe('ItemCard offense rendering + highlighting', () => {
     assert.doesNotMatch(html, /Monster__weapon-mode/)
     assert.doesNotMatch(html, /Monster__spell-slot/)
   })
+
+  it('renders item_category/item_subcategory as badges (as prominent as traits)', () => {
+    const rune = {
+      name: 'Flaming',
+      stat_block: {
+        traits: [{ name: 'Magical', classes: ['trait'] }],
+        item_category: 'Runes',
+        item_subcategory: 'Weapon Property Runes',
+      },
+    }
+    const html = renderToStaticMarkup(React.createElement(ItemCard, { data: rune }))
+    assert.match(html, /Monster__trait--category[^>]*>Runes</)
+    assert.match(html, /Monster__trait--subcategory[^>]*>Weapon Property Runes</)
+  })
+
+  it('omits the category row when neither field is present', () => {
+    const gear = { name: 'Backpack', stat_block: { traits: [] } }
+    const html = renderToStaticMarkup(React.createElement(ItemCard, { data: gear }))
+    assert.doesNotMatch(html, /Monster__categories/)
+  })
+
+  it('renders a category-only item (no subcategory) with just the category badge', () => {
+    const item = { name: 'Mystery', stat_block: { traits: [], item_category: 'Artifacts' } }
+    const html = renderToStaticMarkup(React.createElement(ItemCard, { data: item }))
+    assert.match(html, /Monster__trait--category[^>]*>Artifacts</)
+    assert.doesNotMatch(html, /Monster__trait--subcategory/)
+  })
 })

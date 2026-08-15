@@ -23,6 +23,8 @@ test('item search selects an item and renders its ItemCard', async ({ page }) =>
 
   const detail = page.getByTestId('item-detail')
   await expect(detail.locator('.Monster__name')).toContainText('Sword Cane')
+  // Category/subcategory render as badges on the card (as prominent as traits).
+  await expect(detail.locator('.Monster__trait--category')).toBeVisible()
 
   expect(apiErrors, 'no pfsrd2 API call should 4xx/5xx').toEqual([])
 })

@@ -72,6 +72,20 @@
   background-color: #800080;
 }
 
+/* Item category / subcategory badges — as prominent as trait badges (same shape),
+   but a distinct slate so they read as the item's classification, not game traits. */
+.Monster__categories {
+  display: flex;
+  gap: 4px;
+  margin-top: 3px;
+}
+.Monster__trait--category {
+  background-color: #35506b;
+}
+.Monster__trait--subcategory {
+  background-color: #2b3f54;
+}
+
 .Monster__abilityScore {
   padding: 0 4px 0 2px;
 }
