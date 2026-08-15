@@ -731,3 +731,177 @@
 }
 .Monster__variant-change:hover { text-decoration: underline; }
 .Monster__variant-change:focus-visible { outline: 2px solid #F79639; outline-offset: 2px; }
+
+/* ItemSlotPicker — the "customize this item" panel: a browsable, grouped list of
+   the runes / materials / spells that fit the item, an inline grade step for graded
+   runes, a custom name field, and the applied stack. Mirrors TemplatePicker's tag
+   row; the sections are always visible (browse without knowing names). */
+.ItemSlotPicker {
+  margin: 0.5rem 0 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.ItemSlotPicker__name {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.ItemSlotPicker__name-label {
+  font-weight: bold;
+  color: #f79639;
+}
+.ItemSlotPicker__name-input {
+  flex: 1;
+  padding: 4px 8px;
+  background: #1a1a1a;
+  border: 1px solid #3a332a;
+  border-radius: 3px;
+  color: #e0e0e0;
+}
+.ItemSlotPicker__section {
+  border: 1px solid #2c261e;
+  border-radius: 4px;
+  padding: 0.4rem 0.6rem;
+}
+.ItemSlotPicker__section-title {
+  margin: 0 0 0.3rem;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #f79639;
+}
+.ItemSlotPicker__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.ItemSlotPicker__item-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.ItemSlotPicker__item-name {
+  flex: 1;
+}
+.ItemSlotPicker__item-desc,
+.ItemSlotPicker__grade-price {
+  font-size: 11px;
+  color: #999;
+}
+.ItemSlotPicker__badge {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: #c9a24b;
+  border: 1px solid #6a5a2a;
+  border-radius: 2px;
+  padding: 0 4px;
+}
+.ItemSlotPicker__add,
+.ItemSlotPicker__apply-grade {
+  padding: 2px 10px;
+  border: 1px solid #4a4030;
+  border-radius: 3px;
+  background: #221d16;
+  color: #e0e0e0;
+  cursor: pointer;
+  font-size: 12px;
+}
+.ItemSlotPicker__add:disabled,
+.ItemSlotPicker__apply-grade:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.ItemSlotPicker__grades {
+  margin: 0.3rem 0 0.2rem 0.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+.ItemSlotPicker__grade {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 12px;
+}
+.ItemSlotPicker__constraints {
+  margin: 0 0 0.3rem;
+  font-size: 12px;
+  color: #bbb;
+}
+.ItemSlotPicker__spell-input,
+.ItemSlotPicker__name-input:focus {
+  outline: none;
+}
+.ItemSlotPicker__spell-input {
+  width: 100%;
+  padding: 4px 8px;
+  background: #1a1a1a;
+  border: 1px solid #3a332a;
+  border-radius: 3px;
+  color: #e0e0e0;
+}
+.ItemSlotPicker__spell-results {
+  list-style: none;
+  margin: 0.2rem 0 0;
+  padding: 0;
+}
+.ItemSlotPicker__spell-option {
+  width: 100%;
+  text-align: left;
+  padding: 3px 8px;
+  background: none;
+  border: none;
+  color: #e0e0e0;
+  cursor: pointer;
+}
+.ItemSlotPicker__spell-option:hover {
+  background: #221d16;
+}
+.ItemSlotPicker__stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+.ItemSlotPicker__tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  background: #f79639;
+  color: #1a1a1a;
+  border-radius: 3px;
+  font-size: 12px;
+  font-weight: bold;
+}
+.ItemSlotPicker__remove {
+  margin-left: 4px;
+  cursor: pointer;
+  font-weight: normal;
+}
+.ItemSlotPicker__clear {
+  font-size: 11px;
+  color: #888;
+  cursor: pointer;
+  margin-left: 4px;
+}
+
+/* Item offense (weapon strikes) + a holder's slotted spell — rendered so an applied
+   rune / spell is visible and can carry the change highlight. */
+.Monster__offense {
+  margin: 0.3rem 0;
+}
+.Monster__weapon-mode {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: baseline;
+}
+.Monster__weapon-damage,
+.Monster__spell-slot {
+  margin: 0.15rem 0;
+}

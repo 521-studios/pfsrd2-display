@@ -6,11 +6,16 @@ import {
   ItemSearch,
   ItemCard,
   TemplatePicker,
+  ItemSlotPicker,
   listTemplates,
   applyTemplate,
   mergePatches,
   appliedTemplates as buildAppliedTemplates,
   parseMultipartResponse,
+  fetchEligible,
+  applyItemEffect,
+  mergeItemPatches,
+  customizedItem,
 } from '../src/index.js'
 import Markdown from '../src/shared/Markdown'
 import '../styles/index.css'
@@ -40,17 +45,25 @@ class ErrorBoundary extends React.Component {
 // below). The signed POST to /templates/apply is shared by both flows: CloudFront
 // OAC with Lambda Function URLs requires the client to supply x-amz-content-sha256
 // for POSTs (CloudFront does not compute it).
-async function signedApplyPost(body) {
-  const bodyHash = Array.from(
-    new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(body))),
-  )
+async function sha256Hex(body) {
+  return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(body))))
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('')
-  return fetch(`${API}/templates/apply`, {
+}
+
+// signedPost is the `post(path, body)` seam for the item-apply flow: OAC needs the
+// client to supply x-amz-content-sha256 for POSTs. Returns the raw Response so the
+// library helper (applyItemEffect) can read status + body on a boundary refusal.
+async function signedPost(path, body) {
+  return fetch(`${API}${path}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-amz-content-sha256': bodyHash },
+    headers: { 'Content-Type': 'application/json', 'x-amz-content-sha256': await sha256Hex(body) },
     body,
   })
+}
+
+async function signedApplyPost(body) {
+  return signedPost('/templates/apply', body)
 }
 
 // --- Mode Toggle (creatures vs items) ---
@@ -172,14 +185,28 @@ function ItemPanel({ onSelect, mode, onModeChange }) {
   )
 }
 
+// ItemDetail renders the selected item and — behind a "Customize" toggle — the
+// reference wiring for the library's ItemSlotPicker: fetch what can be applied
+// (fetchEligible), chain applies onto the in-progress item (applyItemEffect via the
+// signed POST), name the result, and render it through ItemCard with change-
+// highlighting (mergeItemPatches → patches). Consumers copy this pattern.
 function ItemDetail({ item }) {
   const [data, setData] = useState(null)
   const [error, setError] = useState(null)
   const [variant, setVariant] = useState(-1)
+  const [customizing, setCustomizing] = useState(false)
+  const [eligibility, setEligibility] = useState(null)
+  const [stack, setStack] = useState([])
+  const [name, setName] = useState('')
+  const [applying, setApplying] = useState(false)
 
   useEffect(() => {
     setError(null)
     setVariant(-1) // reset the variant selection when the item changes
+    setCustomizing(false)
+    setEligibility(null)
+    setStack([])
+    setName('')
     if (!item) {
       setData(null)
       return
@@ -199,11 +226,74 @@ function ItemDetail({ item }) {
     }
   }, [item])
 
+  const startCustomize = useCallback(async () => {
+    setCustomizing(true)
+    setError(null)
+    try {
+      setEligibility(await fetchEligible({ get: fetchJson, itemGameId: item.game_id }))
+    } catch (e) {
+      setError(String(e.message || e))
+    }
+  }, [item])
+
+  // Chain one effect onto the current item state (base item, or the last result).
+  const applyEffect = useCallback(
+    async (effectGameId, grade) => {
+      const current = stack.length > 0 ? stack[stack.length - 1].item : data
+      setApplying(true)
+      setError(null)
+      try {
+        const res = await applyItemEffect({
+          post: signedPost,
+          itemGameId: item.game_id,
+          item: current,
+          effectGameId,
+          grade,
+        })
+        setStack((s) => [...s, res])
+      } catch (e) {
+        setError(e.status === 409 ? `Not allowed: ${e.body || 'ineligible'}` : String(e.message || e))
+      } finally {
+        setApplying(false)
+      }
+    },
+    [stack, data, item],
+  )
+
+  const searchSpells = useCallback(async (q) => {
+    const params = new URLSearchParams({ q, limit: '10' })
+    params.append('type', 'spells')
+    const res = await fetch(`${API}/search/suggest/unified?${params}`)
+    return res.json()
+  }, [])
+
+  const shown = customizedItem(data, stack, name)
+  const patches = mergeItemPatches(stack)
+
   return (
     <div style={styles.detailPanel} data-testid="item-detail">
       {!item && <div style={styles.placeholder}>Search for an item…</div>}
       {error && <div style={{ color: '#f55' }}>{error}</div>}
-      {data && <ItemCard data={data} variant={variant} onVariantChange={setVariant} />}
+      {data && !customizing && (
+        <button data-testid="customize" style={styles.modeBtn} onClick={startCustomize}>
+          Customize
+        </button>
+      )}
+      {customizing && eligibility && (
+        <ItemSlotPicker
+          eligibility={eligibility}
+          name={name}
+          onNameChange={setName}
+          stack={stack}
+          loading={applying}
+          onApply={(candidate, { grade }) => applyEffect(candidate.game_id, grade)}
+          onApplySpell={(spell) => applyEffect(spell.game_id)}
+          onRemoveLast={() => setStack((s) => s.slice(0, -1))}
+          onClearAll={() => setStack([])}
+          searchSpells={searchSpells}
+        />
+      )}
+      {shown && <ItemCard data={shown} patches={patches} variant={variant} onVariantChange={setVariant} />}
     </div>
   )
 }

@@ -1,7 +1,10 @@
-import React, { useEffect, useId, useRef, useState } from 'react'
+import React, { useEffect, useId, useMemo, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
 import Traits from '../creatures/components/Traits'
 import Markdown from '../shared/Markdown'
+import Changed from '../shared/Changed'
+import { DisplayProvider } from '../context/DisplayContext'
+import { buildChangedPaths } from '../shared/patches'
 import { itemPrice } from '../shared/pf2e'
 
 // Renders any item/equipment JSON handed to it: a pristine pfsrd2-data
@@ -25,7 +28,7 @@ import { itemPrice } from '../shared/pf2e'
 //     to reopen the full choice.
 // `variant` is the selected index (or -1/undefined for none); `onVariantChange(index)`
 // persists the pick (the consumer owns/requires it).
-const ItemCard = ({ data, masked, maskLabel, variant = -1, onVariantChange }) => {
+const ItemCard = ({ data, masked, maskLabel, variant = -1, onVariantChange, patches = null }) => {
   // "Reopen the choice" is a local view toggle; the chosen index still lives with
   // the consumer. Reset it when the item itself changes.
   const [choosing, setChoosing] = useState(false)
@@ -33,6 +36,10 @@ const ItemCard = ({ data, masked, maskLabel, variant = -1, onVariantChange }) =>
   const commitFocus = useRef(false) // move focus to the change control after a commit
   const itemKey = data ? data.game_id || data.name : null
   useEffect(() => { setChoosing(false) }, [itemKey])
+  // Change-highlighting: derive the changed JSON-Pointer set from the applied
+  // patches (from mergeItemPatches) against the resolved item, exactly as
+  // CreatureStatBlock does. null patches → no highlighting.
+  const changedPaths = useMemo(() => buildChangedPaths(patches, data), [patches, data])
   // After a keyboard commit collapses the list, land focus on the change control
   // instead of dropping to <body>. (No-op for a mouse commit: :focus-visible
   // won't show a ring for programmatic focus after a click.)
@@ -59,6 +66,13 @@ const ItemCard = ({ data, masked, maskLabel, variant = -1, onVariantChange }) =>
   // stat_block wrapper and provide these fields at the top level.
   const stat_block = data.stat_block || data
   const { bulk, traits, text } = stat_block
+  // Offense (weapon strikes) and a spell holder's slotted spell are what runes and
+  // spell applies change; render them so the applied modification is visible + can
+  // highlight. Absent on non-weapons / non-holders (rendered only when present).
+  const weaponModes = Array.isArray(stat_block.offense && stat_block.offense.weapon_modes)
+    ? stat_block.offense.weapon_modes
+    : []
+  const heldSpell = stat_block.spell_slots && stat_block.spell_slots.spell
   const allVariants = Array.isArray(stat_block.variants) ? stat_block.variants : []
   // Only a real choice (>1) counts; a lone entry equals the base and renders plainly.
   const hasVariants = allVariants.length > 1
@@ -81,6 +95,7 @@ const ItemCard = ({ data, masked, maskLabel, variant = -1, onVariantChange }) =>
   const shownPrice = itemPrice(data, locked ? variant : -1)
 
   return (
+    <DisplayProvider value={{ changedPaths, monsterName: headerName, onRoll: null }}>
     <div className='Monster'>
       <div className='Monster__header'>
         <div className='Monster__name'>{headerName}</div>
@@ -88,7 +103,29 @@ const ItemCard = ({ data, masked, maskLabel, variant = -1, onVariantChange }) =>
       </div>
 
       <hr />
-      <Traits traits={traits} />
+      {/* Block-highlight the traits region when a material grants a trait (the
+          trait list is re-ordered, so a per-badge path would be unstable). */}
+      <Changed path='/stat_block/traits' block>
+        <Traits traits={traits} />
+      </Changed>
+
+      {weaponModes.length > 0 ? (
+        <div className='Monster__offense'>
+          {weaponModes.map((mode, i) => (
+            <WeaponMode key={i} mode={mode} index={i} />
+          ))}
+        </div>
+      ) : null}
+
+      {heldSpell ? (
+        <Changed path='/stat_block/spell_slots/spell' block>
+          <div className='Monster__spell-slot'>
+            <strong className='Monster__heading'>Spell </strong>
+            {heldSpell.name}
+            {heldSpell.rank != null ? ` (rank ${heldSpell.rank})` : ''}
+          </div>
+        </Changed>
+      ) : null}
 
       {shownPrice && shownPrice.text ? (
         <div className='Monster__price'>
@@ -133,7 +170,53 @@ const ItemCard = ({ data, masked, maskLabel, variant = -1, onVariantChange }) =>
         />
       ) : null}
     </div>
+    </DisplayProvider>
   )
+}
+
+// One weapon strike mode: its attack modifiers (a potency rune's item bonus) and
+// damage line (a striking rune's bumped dice + re-rendered formula). Each field is
+// wrapped in Changed at its own JSON-Pointer path so an applied rune highlights it.
+// Modifiers are mapped by their real array index (not filtered) so the path matches
+// the append the engine emitted.
+const WeaponMode = ({ mode, index }) => {
+  const damage = Array.isArray(mode.damage) ? mode.damage : []
+  const modifiers = Array.isArray(mode.modifiers) ? mode.modifiers : []
+  return (
+    <div className='Monster__weapon-mode'>
+      {modifiers.map((m, k) =>
+        m && m.subtype === 'attack' ? (
+          <Changed key={k} path={`/stat_block/offense/weapon_modes/${index}/modifiers/${k}`}>
+            <span className='Monster__weapon-attack'>
+              <strong className='Monster__heading'>Attack </strong>
+              {signed(m.bonus_value)}
+              {m.bonus_type ? ` ${m.bonus_type}` : ''}
+            </span>
+          </Changed>
+        ) : null,
+      )}
+      {damage.length > 0 ? (
+        <div className='Monster__weapon-damage'>
+          <strong className='Monster__heading'>Damage </strong>
+          {damage.map((d, j) => (
+            <React.Fragment key={j}>
+              {j > 0 ? ' plus ' : ''}
+              <Changed path={`/stat_block/offense/weapon_modes/${index}/damage/${j}/formula`}>
+                <span>{d.formula}{d.damage_type ? ` ${d.damage_type}` : ''}</span>
+              </Changed>
+            </React.Fragment>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+const signed = (n) => (typeof n === 'number' && n >= 0 ? `+${n}` : `${n}`)
+
+WeaponMode.propTypes = {
+  mode: PropTypes.object.isRequired,
+  index: PropTypes.number.isRequired,
 }
 
 // The stacked version list, shown while choosing. A keyboard-navigable radiogroup
@@ -230,7 +313,8 @@ ItemCard.propTypes = {
   masked: PropTypes.bool,
   maskLabel: PropTypes.string,
   variant: PropTypes.number, // selected index into stat_block.variants (-1 = none)
-  onVariantChange: PropTypes.func // (index) => void; makes the versions selectable
+  onVariantChange: PropTypes.func, // (index) => void; makes the versions selectable
+  patches: PropTypes.array // merged apply patch groups (mergeItemPatches) → change-highlighting
 }
 
 export default ItemCard

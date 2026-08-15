@@ -8,6 +8,7 @@ export { default as Markdown } from './shared/Markdown'
 export { default as CreatureSearch } from './search/CreatureSearch'
 export { default as ItemSearch } from './search/ItemSearch'
 export { default as TemplatePicker } from './templates/TemplatePicker'
+export { default as ItemSlotPicker } from './items/ItemSlotPicker'
 export {
   parseMultipartResponse,
   mergePatches,
@@ -15,6 +16,12 @@ export {
   listTemplates,
   applyTemplate,
 } from './templates/templates'
+export {
+  fetchEligible,
+  applyItemEffect,
+  mergeItemPatches,
+  customizedItem,
+} from './items/items'
 export { DisplayProvider, useDisplay, useIsChanged } from './context/DisplayContext'
 export { buildChangedPaths } from './shared/patches'
 export {
