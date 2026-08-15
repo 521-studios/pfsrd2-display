@@ -98,4 +98,11 @@ describe('ItemCard offense rendering + highlighting', () => {
     const html = renderToStaticMarkup(React.createElement(ItemCard, { data: gear }))
     assert.doesNotMatch(html, /Monster__categories/)
   })
+
+  it('renders a category-only item (no subcategory) with just the category badge', () => {
+    const item = { name: 'Mystery', stat_block: { traits: [], item_category: 'Artifacts' } }
+    const html = renderToStaticMarkup(React.createElement(ItemCard, { data: item }))
+    assert.match(html, /Monster__trait--category[^>]*>Artifacts</)
+    assert.doesNotMatch(html, /Monster__trait--subcategory/)
+  })
 })

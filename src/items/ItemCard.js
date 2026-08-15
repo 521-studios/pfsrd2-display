@@ -68,7 +68,8 @@ const ItemCard = ({ data, masked, maskLabel, variant = -1, onVariantChange, patc
   const { bulk, traits, text } = stat_block
   // Category/subcategory read like traits and matter as much (a GM filters and
   // recognizes items by "Rune / Weapon Property Rune"), so render them as badges
-  // alongside the trait badges. Locked variants may carry their own.
+  // alongside the trait badges. They're a family property, read from the item's
+  // stat_block (not per-variant).
   const itemCategory = stat_block.item_category
   const itemSubcategory = stat_block.item_subcategory
   // Offense (weapon strikes) and a spell holder's slotted spell are what runes and
