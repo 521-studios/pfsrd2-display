@@ -30,8 +30,15 @@ test('customize: name a weapon + apply a graded rune → highlighted result', as
   await picker.getByTestId('item-name').fill('Sting')
   await expect(card.locator('.Monster__name')).toHaveText('Sting')
 
+  // Match a candidate row by its EXACT name — "Striking"/"Weapon Potency" are
+  // substrings of "Mythic Striking"/"Mythic Weapon Potency", which are also eligible.
+  const row = (nameRe) =>
+    picker.locator('.ItemSlotPicker__item').filter({
+      has: page.locator('.ItemSlotPicker__item-name', { hasText: nameRe }),
+    })
+
   // Apply a graded fundamental rune: Weapon Potency → choose a grade → Apply.
-  const potency = picker.locator('.ItemSlotPicker__item', { hasText: 'Weapon Potency' })
+  const potency = row(/^Weapon Potency$/)
   await potency.getByTestId('grade-open').click()
   await potency.getByTestId('apply-grade').click()
 
@@ -41,7 +48,7 @@ test('customize: name a weapon + apply a graded rune → highlighted result', as
   await expect(card.locator('.Monster__weapon-attack')).toContainText('item')
 
   // Stack a second rune (Striking) → the damage dice bump + re-render, highlighted.
-  const striking = picker.locator('.ItemSlotPicker__item', { hasText: 'Striking' }).first()
+  const striking = row(/^Striking$/)
   const gradeOpen = striking.getByTestId('grade-open')
   if (await gradeOpen.count()) {
     await gradeOpen.click()
