@@ -66,6 +66,11 @@ const ItemCard = ({ data, masked, maskLabel, variant = -1, onVariantChange, patc
   // stat_block wrapper and provide these fields at the top level.
   const stat_block = data.stat_block || data
   const { bulk, traits, text } = stat_block
+  // Category/subcategory read like traits and matter as much (a GM filters and
+  // recognizes items by "Rune / Weapon Property Rune"), so render them as badges
+  // alongside the trait badges. Locked variants may carry their own.
+  const itemCategory = stat_block.item_category
+  const itemSubcategory = stat_block.item_subcategory
   // Offense (weapon strikes) and a spell holder's slotted spell are what runes and
   // spell applies change; render them so the applied modification is visible + can
   // highlight. Absent on non-weapons / non-holders (rendered only when present).
@@ -108,6 +113,17 @@ const ItemCard = ({ data, masked, maskLabel, variant = -1, onVariantChange, patc
       <Changed path='/stat_block/traits' block>
         <Traits traits={traits} />
       </Changed>
+
+      {itemCategory || itemSubcategory ? (
+        <div className='Monster__categories'>
+          {itemCategory ? (
+            <span className='Monster__trait Monster__trait--category'>{itemCategory}</span>
+          ) : null}
+          {itemSubcategory ? (
+            <span className='Monster__trait Monster__trait--subcategory'>{itemSubcategory}</span>
+          ) : null}
+        </div>
+      ) : null}
 
       {weaponModes.length > 0 ? (
         <div className='Monster__offense'>
