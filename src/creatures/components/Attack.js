@@ -12,22 +12,18 @@ const getTraits = (attack) => {
   return ""
 }
 
-const setLabel = (attack) => {
-  for (var j = 0; j < attack.damage.length; j++) {
-    var label = []
-    var types = []
-    label.push(`${attack.weapon}:`)
-    var d = attack.damage[j]
-    d.persistent ? types.push("persistent") : null
-    d.damage_type ? types.push(d.damage_type) : null
-    d.splash ? types.push("splash") : null
-    if (types.length > 0) {
-      let type = types.join(" ")
-      label.push(`(${type})`)
-    }
-    d.notes ? label.push(d.notes) : null
-    d.label = label.join(" ")
-  }
+// The roll label for one damage entry: "{weapon}: ({types}) {notes}". Pure — it
+// returns the string rather than writing `d.label` onto the (shared, prop) damage
+// object, which mutated props during render (efi). Exported for unit testing.
+export const damageLabel = (attack, d) => {
+  const types = []
+  if (d.persistent) types.push("persistent")
+  if (d.damage_type) types.push(d.damage_type)
+  if (d.splash) types.push("splash")
+  const parts = [`${attack.weapon}:`]
+  if (types.length > 0) parts.push(`(${types.join(" ")})`)
+  if (d.notes) parts.push(d.notes)
+  return parts.join(" ")
 }
 
 const Attack = (props) => {
@@ -37,7 +33,6 @@ const Attack = (props) => {
   if (!attack) { return null }
 
   let traits = getTraits(attack)
-  if (attack.damage) { setLabel(attack) }
 
   const getDamageStructuredFormula = () => {
     let formulas = []
@@ -83,7 +78,7 @@ const Attack = (props) => {
               <Changed path={dmgBasePath} key={j}>
                 <span>
                   {j === 0 ? null : <React.Fragment>, </React.Fragment>}
-                  {d.formula ? <RollableText type="formula" label={d.label} formula={d.formula}>{d.formula}</RollableText> : null}
+                  {d.formula ? <RollableText type="formula" label={damageLabel(attack, d)} formula={d.formula}>{d.formula}</RollableText> : null}
                   {d.effect ? <React.Fragment>{' '}{d.effect}</React.Fragment> : null}
                   {d.persistent ? <React.Fragment>{' '}persistent</React.Fragment> : null}
                   {d.splash ? <React.Fragment>{' '}splash</React.Fragment> : null}
