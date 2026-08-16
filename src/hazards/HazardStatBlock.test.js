@@ -37,8 +37,10 @@ describe('HazardStatBlock', () => {
         disable: 'DC 16 Thievery',
         ac: 16, hardness: 8, hp: 32, bt: 16,
         saves: [{ name: 'Fort', value: 9 }, { name: 'Reflex', value: 12 }],
+        immunities: [{ name: 'fire' }],
+        weaknesses: [{ name: 'cold', value: 5 }],
         attacks: [{ name: 'spike', attack_type: 'ranged', weapon: 'spike',
-          bonus: { bonuses: [11] },
+          bonus: { bonuses: [11] }, // a single (no-MAP) bonus
           damage: [{ formula: '2d6+3', damage_type: 'piercing' }] }],
       },
     }
@@ -47,7 +49,12 @@ describe('HazardStatBlock', () => {
     assert.match(html, /AC[^<]*<\/strong>16/)
     assert.match(html, /Hardness[^<]*<\/strong>8/)
     assert.match(html, /HP[^<]*<\/strong>32 \(BT 16\)/)
-    assert.match(html, /2d6\+3/) // attack damage rendered
+    assert.match(html, /Immunities[^<]*<\/strong>[\s\S]*fire/)
+    assert.match(html, /Weaknesses[^<]*<\/strong>[\s\S]*cold/)
+    // Single-bonus attack renders +11 with NO "[undefined/undefined]" MAP bracket.
+    assert.match(html, /\+11/)
+    assert.doesNotMatch(html, /undefined/)
+    assert.match(html, /2d6\+3 piercing/)
   })
 
   it('accepts a top-level (unwrapped) hazard and returns null for no data', () => {

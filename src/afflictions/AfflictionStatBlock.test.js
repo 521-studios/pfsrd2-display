@@ -49,6 +49,30 @@ describe('AfflictionStatBlock', () => {
     assert.doesNotMatch(html, /Stage 1/) // a curse has no stages
   })
 
+  it('renders curse-only fields (usage/tempted_curse), maximum_duration, special, and a save_type-only save', () => {
+    const doc = {
+      affliction: {
+        name: 'Tempting Hex', affliction_type: 'curse', level: 5,
+        traits: [{ name: 'Curse' }], description: 'A tempting curse.',
+        // A save with only a save_type (no dc, no text) falls through to the type.
+        saving_throw: { save_type: 'Will' },
+        usage: 'worn amulet', tempted_curse: 'Take the tempting action to worsen it.',
+        effect: 'clumsy 1', maximum_duration: 'until removed', special: 'A ritual can lift it.',
+      },
+    }
+    const html = renderToStaticMarkup(React.createElement(AfflictionStatBlock, { data: doc }))
+    assert.match(html, /Usage/)
+    assert.match(html, /worn amulet/)
+    assert.match(html, /Tempted Curse/)
+    assert.match(html, /Maximum Duration/)
+    assert.match(html, /until removed/)
+    assert.match(html, /Special/)
+    assert.match(html, /A ritual can lift it/)
+    // save_type-only fallback → just "Will" (no DC, no "undefined")
+    assert.match(html, /Saving Throw<\/strong>\s*Will/)
+    assert.doesNotMatch(html, /undefined/)
+  })
+
   it('accepts a top-level affliction and returns null for no data', () => {
     const flat = { name: 'Q', affliction_type: 'curse', level: 2, traits: [], description: 'd' }
     assert.match(renderToStaticMarkup(React.createElement(AfflictionStatBlock, { data: flat })), /Curse 2/)

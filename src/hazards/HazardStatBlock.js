@@ -2,7 +2,6 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import Traits from '../creatures/components/Traits'
 import Ability from '../creatures/components/Ability'
-import Attack from '../creatures/components/Attack'
 import Save from '../creatures/components/Save'
 import Protection from '../creatures/components/Protection'
 import Markdown from '../shared/Markdown'
@@ -127,7 +126,7 @@ export default function HazardStatBlock({ data, onRoll = () => {} }) {
 
         {attacks.length ? (
           <div className="Monster__offense">
-            {attacks.map((a, i) => <Attack key={i} attack={a} />)}
+            {attacks.map((a, i) => <HazardAttack key={i} attack={a} />)}
           </div>
         ) : null}
 
@@ -138,6 +137,31 @@ export default function HazardStatBlock({ data, onRoll = () => {} }) {
         ) : null}
       </div>
     </DisplayProvider>
+  )
+}
+
+// A hazard strike: hand-rendered rather than reusing the creature Attack leaf, which
+// assumes a 3-entry multiple-attack-penalty bonus array. A hazard attacks once, so a
+// single bonus must not render "+11 [undefined/undefined]".
+function HazardAttack({ attack }) {
+  const bonuses = (attack.bonus && Array.isArray(attack.bonus.bonuses) && attack.bonus.bonuses) || []
+  const damage = Array.isArray(attack.damage) ? attack.damage : []
+  const traits = Array.isArray(attack.traits) ? attack.traits : []
+  const weapon = attack.weapon && attack.weapon !== attack.attack_type ? `${attack.weapon} ` : ''
+  return (
+    <div className="Monster__hazard-attack">
+      <strong className="Monster__heading">{capitalize(attack.attack_type || attack.name || 'Attack')} </strong>
+      {weapon}
+      {bonuses.length ? signed(bonuses[0]) : ''}
+      {traits.length ? ` (${traits.map((t) => (t.value ? `${t.name} ${t.value}` : t.name)).join(', ')})` : ''}
+      {damage.length ? (
+        <>
+          {' '}
+          <strong className="Monster__heading">Damage </strong>
+          {damage.map((d, j) => `${j > 0 ? ' plus ' : ''}${d.formula || ''}${d.damage_type ? ` ${d.damage_type}` : ''}`).join('')}
+        </>
+      ) : null}
+    </div>
   )
 }
 
@@ -158,9 +182,11 @@ function ProtectionLine({ label, items }) {
 
 const protections = (v) => (Array.isArray(v) ? v : [])
 const signed = (n) => (typeof n === 'number' && n >= 0 ? `+${n}` : `${n}`)
+const capitalize = (s) => (s ? s[0].toUpperCase() + s.slice(1) : s)
 
 HazardStatBlock.propTypes = {
   data: PropTypes.object,
   onRoll: PropTypes.func,
 }
+HazardAttack.propTypes = { attack: PropTypes.object.isRequired }
 ProtectionLine.propTypes = { label: PropTypes.string, items: PropTypes.array }
