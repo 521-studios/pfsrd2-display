@@ -46,3 +46,36 @@ describe('Offense (render) — edges', () => {
     assert.match(html, /class="Monster__offense"/)
   })
 })
+
+import { DisplayProvider } from '../../context/DisplayContext'
+import { buildChangedPaths } from '../../shared/patches'
+
+describe('Offense (render) — tee: appended actions highlight', () => {
+  const withChanges = (offense, patches) => {
+    const changedPaths = buildChangedPaths(patches, { stat_block: { offense } })
+    return renderToStaticMarkup(
+      <DisplayProvider value={{ changedPaths }}>
+        <Offense offense={offense} />
+      </DisplayProvider>,
+    )
+  }
+
+  it('highlights an APPENDED affliction action (Snow Spray-style) at the action index', () => {
+    const offense = {
+      offensive_actions: [
+        { offensive_action_type: 'attack', attack: { name: 'Bite', weapon: 'bite', bonus: { bonuses: [10, 5, 0] }, damage: [{ formula: '1d6', damage_type: 'piercing' }] } },
+        { offensive_action_type: 'affliction', affliction: { name: 'Snow Spray', onset: '1 round' } },
+      ],
+    }
+    // The append patch (/-) resolves to index 1 → that action is marked added.
+    const html = withChanges(offense, [{ operations: [{ op: 'add', path: '/stat_block/offense/offensive_actions/-' }] }])
+    assert.match(html, /Monster__changed--block[\s\S]{0,80}Snow Spray/) // the affliction is wrapped in a block highlight
+  })
+
+  it('does not highlight a non-appended affliction (no patch touches it)', () => {
+    const offense = { offensive_actions: [{ offensive_action_type: 'affliction', affliction: { name: 'Old Venom' } }] }
+    const html = withChanges(offense, []) // no changes
+    assert.match(html, /Old Venom/)
+    assert.doesNotMatch(html, /Monster__changed/)
+  })
+})
