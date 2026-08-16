@@ -4,8 +4,10 @@ import { jsxInJs } from './vite-plugins.mjs'
 
 // jsxInJs() forces .js files under src/ through esbuild's JSX transform (components
 // use the .js extension, which Vite's default pipeline won't treat as JSX). Its
-// transform hook has three branches: a src/*.js file containing JSX (transform), a
-// non-src path (skip), and a src/*.js file with no JSX (skip). (d2w)
+// transform hook fires only when BOTH parts of the guard hold — the id matches
+// /\/src\/.*\.js$/ AND the code contains "<". These cases partition that guard: a
+// src/*.js file with JSX (transform), a non-src path (skip), a src/*.js file with no
+// "<" (skip), and a src/ file whose extension isn't .js (skip). (d2w)
 
 const jsxSource = 'export const A = () => <div className="x">hi</div>\n'
 
