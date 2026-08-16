@@ -25,6 +25,8 @@ test('ESM entry resolves and exposes named exports', async () => {
   assert.strictEqual(typeof mod.ItemSearch, 'function', 'ItemSearch export missing')
   assert.strictEqual(typeof mod.TemplatePicker, 'function', 'TemplatePicker export missing')
   assert.strictEqual(typeof mod.ItemSlotPicker, 'function', 'ItemSlotPicker export missing')
+  assert.strictEqual(typeof mod.HazardStatBlock, 'function', 'HazardStatBlock export missing')
+  assert.strictEqual(typeof mod.AfflictionStatBlock, 'function', 'AfflictionStatBlock export missing')
   for (const fn of ['parseMultipartResponse', 'mergePatches', 'listTemplates', 'applyTemplate', 'fetchEligible', 'applyItemEffect', 'mergeItemPatches', 'customizedItem']) {
     assert.strictEqual(typeof mod[fn], 'function', `${fn} export missing`)
   }
@@ -39,6 +41,8 @@ test('CJS entry resolves and exposes named exports', () => {
   assert.strictEqual(typeof mod.ItemSearch, 'function', 'ItemSearch export missing')
   assert.strictEqual(typeof mod.TemplatePicker, 'function', 'TemplatePicker export missing')
   assert.strictEqual(typeof mod.ItemSlotPicker, 'function', 'ItemSlotPicker export missing')
+  assert.strictEqual(typeof mod.HazardStatBlock, 'function', 'HazardStatBlock export missing')
+  assert.strictEqual(typeof mod.AfflictionStatBlock, 'function', 'AfflictionStatBlock export missing')
   for (const fn of ['parseMultipartResponse', 'mergePatches', 'listTemplates', 'applyTemplate', 'fetchEligible', 'applyItemEffect', 'mergeItemPatches', 'customizedItem']) {
     assert.strictEqual(typeof mod[fn], 'function', `${fn} export missing`)
   }

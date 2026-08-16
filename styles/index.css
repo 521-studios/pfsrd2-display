@@ -919,3 +919,17 @@
 .Monster__spell-slot {
   margin: 0.15rem 0;
 }
+
+/* Hazard + affliction stat blocks — flat-doc entities rendered via the shared
+   Monster__ conventions, with a few labelled lines of their own. */
+.Monster__hazard-stealth,
+.Monster__hazard-disable,
+.Monster__hazard-reset,
+.Monster__hazard-routine,
+.Monster__hazard-defense,
+.Monster__affliction-line {
+  margin: 0.2rem 0;
+}
+.Monster__affliction-body {
+  margin-top: 0.3rem;
+}
