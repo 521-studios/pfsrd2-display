@@ -11,15 +11,13 @@ const Ability = (props) => {
 
   if (!ability) { return null }
 
-  let period = ""
-
-  let semicolon = " "
-
-  const separator = () => {
-    let result = `${semicolon}`
-    semicolon = "; "
-    return result
-  }
+  // A trailing "." goes before the ability text iff a stat line rendered — i.e. any of
+  // area (non-empty) / range / saving_throw / damage is present. Derived, not set as a
+  // side effect of the stat-line renderers (2ne).
+  const period =
+    (ability.area && ability.area.length > 0) || ability.range || ability.saving_throw || ability.damage
+      ? '.'
+      : ''
 
   const renderAction = (ability) => {
     const action = ability.action_type || ability.action
@@ -45,7 +43,6 @@ const Ability = (props) => {
 
   const renderRange = (ability) => {
     if (!ability.range) { return null }
-    period = "."
     const r = ability.range
     const display = r.touch ? 'touch' : r.text || `${r.range} ${r.unit}`
     return (
@@ -60,7 +57,6 @@ const Ability = (props) => {
 
   const renderArea = (ability) => {
     if (!ability.area || ability.area.length === 0) { return null }
-    period = "."
     return (
       <span>
         {' '}
@@ -73,7 +69,6 @@ const Ability = (props) => {
 
   const renderSavingThrow = (ability) => {
     if (!ability.saving_throw) { return null }
-    period = "."
 
     // Handle both array (1.4) and object (1.3) formats
     const isArray = Array.isArray(ability.saving_throw)
@@ -116,7 +111,6 @@ const Ability = (props) => {
     }
 
     if (!ability.damage) { return null }
-    period = "."
     return (
       <Changed path={basePath ? `${basePath}/damage` : null}>
         <span>
@@ -141,28 +135,34 @@ const Ability = (props) => {
     )
   }
 
-  const renderSection = (section, name) => {
-    if (!section) { return null }
-    return (
-      <span>
-        {separator()}
-        <strong className="Monster__ability-label">{name}</strong>
+  // Detail sections + affliction stages that trail the ability text, each separated by
+  // "; " (the first by " "). Sections render only when present; every stage entry
+  // renders. Built as one ordered list so the separator comes from position, not a
+  // mutated closure variable (2ne). Order matches the original JSX: the labelled
+  // sections, then the stages, then Special.
+  const detailSegments = [
+    { label: null, content: ability.context },
+    { label: 'Cost', content: ability.cost },
+    { label: 'Prerequisite', content: ability.prerequisite },
+    { label: 'Requirement', content: ability.requirement },
+    { label: 'Requirements', content: ability.requirements },
+    { label: 'Frequency', content: ability.frequency },
+    { label: 'Trigger', content: ability.trigger },
+    { label: 'Effect', content: ability.effect },
+    { label: 'Onset', content: ability.onset },
+    { label: 'Maximum Duration', content: ability.maximum_duration },
+  ]
+    .filter((seg) => seg.content)
+    .concat((ability.stages || []).map((s, j) => ({ label: s.name || `Stage ${j + 1}`, content: s.text })))
+    .concat(ability.special ? [{ label: 'Special', content: ability.special }] : [])
+    .map((seg, k) => (
+      <span key={k}>
+        {k === 0 ? ' ' : '; '}
+        <strong className="Monster__ability-label">{seg.label}</strong>
         {' '}
-        <Markdown text={section} />
-      </span>
-    )
-  }
-
-  const renderStages = (stages) => {
-    if (!stages || stages.length === 0) { return null }
-    return stages.map((s, j) => (
-      <span key={j}>
-        {separator()}
-        <strong className="Monster__ability-label">{s.name || `Stage ${j + 1}`}</strong>
-        {' '}<Markdown text={s.text} />
+        <Markdown text={seg.content} />
       </span>
     ))
-  }
 
   const hasUMA = !!ability.universal_monster_ability
   const nameEl = hasUMA ? (
@@ -203,29 +203,7 @@ const Ability = (props) => {
           ? null
           : <Markdown text={ability.text} />
       }{
-        renderSection(ability.context, null)
-      }{
-        renderSection(ability.cost, "Cost")
-      }{
-        renderSection(ability.prerequisite, "Prerequisite")
-      }{
-        renderSection(ability.requirement, "Requirement")
-      }{
-        renderSection(ability.requirements, "Requirements")
-      }{
-        renderSection(ability.frequency, "Frequency")
-      }{
-        renderSection(ability.trigger, "Trigger")
-      }{
-        renderSection(ability.effect, "Effect")
-      }{
-        renderSection(ability.onset, "Onset")
-      }{
-        renderSection(ability.maximum_duration, "Maximum Duration")
-      }{
-        renderStages(ability.stages)
-      }{
-        renderSection(ability.special, "Special")
+        detailSegments
       }{
         renderSuccess(ability.critical_success, "Critical Success")
       }{
