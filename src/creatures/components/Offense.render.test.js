@@ -46,3 +46,54 @@ describe('Offense (render) — edges', () => {
     assert.match(html, /class="Monster__offense"/)
   })
 })
+
+import { DisplayProvider } from '../../context/DisplayContext'
+import { buildChangedPaths } from '../../shared/patches'
+
+describe('Offense (render) — tee: appended actions highlight', () => {
+  const withChanges = (offense, patches) => {
+    const changedPaths = buildChangedPaths(patches, { stat_block: { offense } })
+    return renderToStaticMarkup(
+      <DisplayProvider value={{ changedPaths }}>
+        <Offense offense={offense} />
+      </DisplayProvider>,
+    )
+  }
+
+  it('highlights an APPENDED affliction action (Snow Spray-style) at the action index', () => {
+    const offense = {
+      offensive_actions: [
+        { offensive_action_type: 'attack', attack: { name: 'Bite', weapon: 'bite', bonus: { bonuses: [10, 5, 0] }, damage: [{ formula: '1d6', damage_type: 'piercing' }] } },
+        { offensive_action_type: 'affliction', affliction: { name: 'Snow Spray', onset: '1 round' } },
+      ],
+    }
+    // The append patch (/-) resolves to index 1 → that action is marked added.
+    const html = withChanges(offense, [{ operations: [{ op: 'add', path: '/stat_block/offense/offensive_actions/-' }] }])
+    assert.match(html, /Monster__changed--block[\s\S]{0,80}Snow Spray/) // the affliction is wrapped in a block highlight
+  })
+
+  it('does not highlight a non-appended affliction (no patch touches it)', () => {
+    const offense = { offensive_actions: [{ offensive_action_type: 'affliction', affliction: { name: 'Old Venom' } }] }
+    const html = withChanges(offense, []) // no changes
+    assert.match(html, /Old Venom/)
+    assert.doesNotMatch(html, /Monster__changed/)
+  })
+
+  it('highlights an APPENDED ability exactly once (Ability self-highlights; Offense does NOT re-wrap it)', () => {
+    // ability is the one type Offense leaves unwrapped: Ability.js has its own inner
+    // `block added` Changed on .../${i}/ability, which fires as a descendant of the added
+    // index. If Offense also wrapped it, the block highlight would nest/double.
+    const offense = {
+      offensive_actions: [
+        { offensive_action_type: 'attack', attack: { name: 'Bite', weapon: 'bite', bonus: { bonuses: [10] }, damage: [{ formula: '1d6', damage_type: 'piercing' }] } },
+        { offensive_action_type: 'ability', ability: { name: 'Frost Grab', text: 'grabs' } },
+      ],
+    }
+    const html = withChanges(offense, [{ operations: [{ op: 'add', path: '/stat_block/offense/offensive_actions/-' }] }])
+    assert.match(html, /Frost Grab/)
+    // Exactly one block highlight in the whole render: the attack (index 0) isn't added,
+    // and the appended ability highlights through Ability's single inner wrapper — not two.
+    const blocks = html.match(/Monster__changed--block/g) || []
+    assert.strictEqual(blocks.length, 1, `expected 1 block highlight, got ${blocks.length}`)
+  })
+})

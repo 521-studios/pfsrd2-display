@@ -19,14 +19,28 @@ const OFFENSIVE_ACTIONS = {
       <Attack attack={oa.attack} i={i} />
     </Changed>
   ),
+  // spells/affliction/mythic have no inner added-Changed of their own, so an
+  // appended one is highlighted here at the action-index level. attack (its own outer
+  // Changed) and ability (its inner block-added Changed on .../ability, a descendant of
+  // the added index) already self-highlight, so they're not wrapped again. (tee)
   spells: (oa, i) => (
-    <Spells spells={oa.spells} i={i} basePath={`/stat_block/offense/offensive_actions/${i}/spells`} key={i} />
+    <Changed path={`/stat_block/offense/offensive_actions/${i}`} block added key={i}>
+      <Spells spells={oa.spells} i={i} basePath={`/stat_block/offense/offensive_actions/${i}/spells`} />
+    </Changed>
   ),
-  affliction: (oa, i) => <Affliction affliction={oa.affliction} i={i} key={i} />,
+  affliction: (oa, i) => (
+    <Changed path={`/stat_block/offense/offensive_actions/${i}`} block added key={i}>
+      <Affliction affliction={oa.affliction} i={i} />
+    </Changed>
+  ),
   ability: (oa, i) => (
     <Ability ability={oa.ability} i={i} basePath={`/stat_block/offense/offensive_actions/${i}/ability`} key={i} />
   ),
-  mythic_ability: (oa, i) => <MythicAbility mythicAbility={oa.mythic_ability} i={i} key={i} />,
+  mythic_ability: (oa, i) => (
+    <Changed path={`/stat_block/offense/offensive_actions/${i}`} block added key={i}>
+      <MythicAbility mythicAbility={oa.mythic_ability} i={i} />
+    </Changed>
+  ),
 }
 
 const Offense = (props) => {

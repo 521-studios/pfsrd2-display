@@ -19,14 +19,19 @@ const Traits = (props) => {
 
   return (
     <div className='Monster__traits'>
-      {renderTraits.map((trait, i) => (
-        <div
-          key={i}
-          className={`Monster__trait Monster__trait--${trait.class}`}
-        >
-          {trait.name}
-        </div>
-      ))}
+      {renderTraits.map((trait, i) => {
+        const badge = <div className={`Monster__trait Monster__trait--${trait.class}`}>{trait.name}</div>
+        // A trait REPLACED in place by a template (Miniature's Small→Tiny) highlights,
+        // keyed on its original creature_type.traits index. The merged alignment
+        // abbreviation has no single source index, so it renders unwrapped. (tee)
+        return trait.idx == null ? (
+          <React.Fragment key={i}>{badge}</React.Fragment>
+        ) : (
+          <Changed key={i} path={`/stat_block/creature_type/traits/${trait.idx}`}>
+            {badge}
+          </Changed>
+        )
+      })}
       {extraTypes.map((ct, i) => (
         <Changed key={`ct-${i}`} path="/stat_block/creature_type/creature_types">
           <div className={`Monster__trait Monster__trait--${ct.class}`}>
@@ -57,7 +62,7 @@ const traitlist = traits => {
   if (!traits) {
     return []
   }
-  traits.forEach(trait => {
+  traits.forEach((trait, idx) => {
     // template-added badges may carry no classes at all — the parser's
     // remove_empty_fields strips empty arrays (Catfolk badge crashed the
     // stat block here); classless badges render as general traits
@@ -65,11 +70,11 @@ const traitlist = traits => {
     if (classes.includes('alignment')) {
       alignmentTraits.push(trait)
     } else if (classes.includes('size')) {
-      sizeTraits.push({ 'name': trait.name, 'class': 'size', 'trait': trait })
+      sizeTraits.push({ 'name': trait.name, 'class': 'size', 'trait': trait, 'idx': idx })
     } else if (isRarity(trait)) {
-      rarityTraits.push({ 'name': trait.name, 'class': isRarity(trait), 'trait': trait })
+      rarityTraits.push({ 'name': trait.name, 'class': isRarity(trait), 'trait': trait, 'idx': idx })
     } else {
-      newTraits.push({ 'name': trait.name, 'class': 'general', 'trait': trait })
+      newTraits.push({ 'name': trait.name, 'class': 'general', 'trait': trait, 'idx': idx })
     }
   })
 
