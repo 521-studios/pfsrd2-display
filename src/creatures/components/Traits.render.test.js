@@ -33,6 +33,21 @@ describe('Traits (render) — tee: replaced size trait highlights', () => {
     assert.doesNotMatch(html, /Monster__changed[\s\S]{0,40}Beast/)
   })
 
+  it('renders the merged alignment abbreviation unwrapped even under an active changedPaths set', () => {
+    // The alignment badge is a fusion of the alignment traits (LE), so it has no single
+    // creature_type.traits index → trait.idx == null → it renders as a bare Fragment,
+    // never wrapped in a Changed, regardless of what changed elsewhere.
+    const creature = { stat_block: { creature_type: { traits: [{ name: 'Lawful', classes: ['alignment'] }, { name: 'Evil', classes: ['alignment'] }, { name: 'Tiny', classes: ['size'] }] } } }
+    const html = withChanges(
+      { traits: creature.stat_block.creature_type.traits, creatureTypes: [] },
+      [{ operations: [{ op: 'replace', path: '/stat_block/creature_type/traits/2', value: { name: 'Tiny' } }] }],
+      creature,
+    )
+    // LE alignment badge present but NOT wrapped in a change highlight.
+    assert.match(html, /Monster__trait--alignment[^>]*>LE</)
+    assert.doesNotMatch(html, /Monster__changed[\s\S]{0,40}>LE</)
+  })
+
   it('renders badges unwrapped when nothing changed', () => {
     const traits = [{ name: 'Small', classes: ['size'] }, { name: 'Dragon' }]
     const html = renderToStaticMarkup(

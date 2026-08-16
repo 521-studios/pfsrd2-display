@@ -78,4 +78,22 @@ describe('Offense (render) — tee: appended actions highlight', () => {
     assert.match(html, /Old Venom/)
     assert.doesNotMatch(html, /Monster__changed/)
   })
+
+  it('highlights an APPENDED ability exactly once (Ability self-highlights; Offense does NOT re-wrap it)', () => {
+    // ability is the one type Offense leaves unwrapped: Ability.js has its own inner
+    // `block added` Changed on .../${i}/ability, which fires as a descendant of the added
+    // index. If Offense also wrapped it, the block highlight would nest/double.
+    const offense = {
+      offensive_actions: [
+        { offensive_action_type: 'attack', attack: { name: 'Bite', weapon: 'bite', bonus: { bonuses: [10] }, damage: [{ formula: '1d6', damage_type: 'piercing' }] } },
+        { offensive_action_type: 'ability', ability: { name: 'Frost Grab', text: 'grabs' } },
+      ],
+    }
+    const html = withChanges(offense, [{ operations: [{ op: 'add', path: '/stat_block/offense/offensive_actions/-' }] }])
+    assert.match(html, /Frost Grab/)
+    // Exactly one block highlight in the whole render: the attack (index 0) isn't added,
+    // and the appended ability highlights through Ability's single inner wrapper — not two.
+    const blocks = html.match(/Monster__changed--block/g) || []
+    assert.strictEqual(blocks.length, 1, `expected 1 block highlight, got ${blocks.length}`)
+  })
 })
