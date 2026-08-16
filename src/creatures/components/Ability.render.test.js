@@ -61,6 +61,25 @@ describe('Ability (render) — period + separators', () => {
   })
 })
 
+describe('Ability (render) — each stat field independently triggers the period', () => {
+  const cases = [
+    ['area', { name: 'A', area: [{ size: 10, unit: 'foot', shape: 'burst' }], text: 't' }],
+    ['range', { name: 'A', range: { range: 30, unit: 'feet' }, text: 't' }],
+    ['saving_throw', { name: 'A', saving_throw: { dc: 20, save_type: 'Reflex' }, text: 't' }],
+    ['damage', { name: 'A', damage: [{ formula: '1d6', damage_type: 'fire' }], text: 't' }],
+  ]
+  for (const [field, ability] of cases) {
+    it(`${field} alone puts a "." before the text`, () => {
+      const html = renderToStaticMarkup(<Ability ability={ability} i={0} basePath="/x" />)
+      assert.match(html, /\. <span class="Markdown">t<\/span>/)
+    })
+  }
+  it('an empty area array does NOT trigger the period', () => {
+    const html = renderToStaticMarkup(<Ability ability={{ name: 'A', area: [], text: 't' }} i={0} basePath="/x" />)
+    assert.doesNotMatch(html, /\. <span class="Markdown">t/)
+  })
+})
+
 describe('Ability (render) — no stat line', () => {
   it('omits the "." before the text when there is no area/range/save/damage', () => {
     const html = renderToStaticMarkup(
