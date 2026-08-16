@@ -131,7 +131,6 @@ When `patches` is provided (merged `applied_patches` from the template API), mod
 ## Ported Components
 
 The 34 components in `src/creatures/components/` were extracted from `lets-roll/app/javascript/components/components/Monsters/PF2/`. Known issues tracked in beads:
-- `Ability.js` / `Affliction.js`: mutable render variables (bd_521Studios-2ne)
 - `Offense.js`: if/else chain could be component map (bd_521Studios-llu)
 
 ## CSS Customization
