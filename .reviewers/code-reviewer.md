@@ -58,7 +58,7 @@ Issues in files NOT in the diff are out of scope.
 - General quality concerns (test coverage, vague security) unless CLAUDE.md mandates them — those are test-coverage-reviewer's and silent-failure-hunter's domain
 - Issues silenced with a comment (`// lint-ignore: X`) where the rationale is sound
 - "Violates the spirit of CLAUDE.md" findings without a quotable rule
-- Defects a specialist reviewer owns: exported API, props and documented BEM classes (consumer-api-reviewer), accessibility (accessibility-reviewer). Leave those to them
+- Defects a specialist reviewer owns: exported API, props and documented BEM classes (consumer-api-reviewer), accessibility (accessibility-reviewer)
 
 **When flagging, suggest:**
 
