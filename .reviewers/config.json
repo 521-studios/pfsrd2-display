@@ -1,0 +1,15 @@
+{
+  "bots": {
+    "gemini": false
+  },
+  "overlap_acknowledged": {
+    "prop-coupling-reviewer": {
+      "overlaps_with": "code-reviewer",
+      "reason": "code-reviewer can quote CLAUDE.md's 'Context over props' rule; prop-coupling-reviewer is the specialist with the exact context contents and exemptions."
+    },
+    "test-coverage-reviewer": {
+      "overlaps_with": "code-reviewer",
+      "reason": "CLAUDE.md has a Testing section; test-coverage-reviewer owns missing tests and code-reviewer defers to it."
+    }
+  }
+}
