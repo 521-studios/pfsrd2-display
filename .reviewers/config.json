@@ -1,0 +1,19 @@
+{
+  "bots": {
+    "gemini": false
+  },
+  "overlap_acknowledged": {
+    "prop-coupling-reviewer": {
+      "overlaps_with": "consumer-api-reviewer",
+      "reason": "Both read PropTypes: prop-coupling flags PropTypes drifting from the props a component reads (P3); consumer-api flags breaking changes to an exported component's props. code-reviewer's CLAUDE.md overlap is also covered by its Do NOT flag deferral."
+    },
+    "test-coverage-reviewer": {
+      "overlaps_with": "code-reviewer",
+      "reason": "CLAUDE.md has a Testing section; test-coverage-reviewer owns missing tests and code-reviewer defers to it."
+    },
+    "consumer-api-reviewer": {
+      "overlaps_with": "code-reviewer",
+      "reason": "code-reviewer can quote CLAUDE.md's documented classes/usage; consumer-api-reviewer owns the export, prop and BEM contract and code-reviewer defers to it."
+    }
+  }
+}
