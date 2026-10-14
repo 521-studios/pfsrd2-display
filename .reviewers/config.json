@@ -10,6 +10,10 @@
     "test-coverage-reviewer": {
       "overlaps_with": "code-reviewer",
       "reason": "CLAUDE.md has a Testing section; test-coverage-reviewer owns missing tests and code-reviewer defers to it."
+    },
+    "consumer-api-reviewer": {
+      "overlaps_with": "code-reviewer",
+      "reason": "code-reviewer can quote CLAUDE.md's documented classes/usage; consumer-api-reviewer owns the export, prop and BEM contract and code-reviewer defers to it."
     }
   }
 }

@@ -22,7 +22,6 @@ Apply these heuristics:
    - Prefer early returns to reduce nesting (`if (!x) return null`)
 
 **Do NOT flag:**
-- Test files
 - Functions that are long but linear (no branching, just sequential steps)
 - React components with many conditional renders (inherently flat JSX)
 - Components whose length comes primarily from render sections
