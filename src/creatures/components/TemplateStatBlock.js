@@ -1,5 +1,6 @@
-import React, { useState } from 'react'
+import React, { useId, useState } from 'react'
 import Markdown from '../../shared/Markdown'
+import CollapsibleHeader from '../../shared/CollapsibleHeader'
 import Action from './Action'
 
 const AdjustmentsTable = ({ adjustments }) => {
@@ -131,6 +132,7 @@ const TemplateChanges = ({ combinedText, abilityChanges, poolAbilities }) => {
 
 const TemplateStatBlock = ({ template }) => {
   const [open, setOpen] = useState(false)
+  const bodyId = useId()
 
   if (!template) return null
 
@@ -142,12 +144,11 @@ const TemplateStatBlock = ({ template }) => {
 
   return (
     <div className="Monster__template">
-      <div className="Monster__template-title Monster__collapsible" onClick={() => setOpen(!open)}>
-        <span className={`Monster__collapse-icon${open ? ' Monster__collapse-icon--open' : ''}`} />
+      <CollapsibleHeader className="Monster__template-title" open={open} onToggle={() => setOpen(!open)} controls={bodyId}>
         {template.name} Template
-      </div>
+      </CollapsibleHeader>
       {open ? (
-        <div className="Monster__template-body">
+        <div className="Monster__template-body" id={bodyId}>
           {template.text ? (
             <div className="Monster__template-description">
               <Markdown text={template.text} />

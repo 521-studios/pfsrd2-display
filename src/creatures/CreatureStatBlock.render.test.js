@@ -139,7 +139,7 @@ describe('CreatureStatBlock (render) — sections and sidebars', () => {
     const html = render(withSections(sidebar('Pools of Blood', 'Related Creatures', 'related_creatures')))
     assert.match(
       html,
-      /class="Monster__sidebar Monster__sidebar--related_creatures"><div class="Monster__sidebar-heading[^"]*"><div class="Monster__sidebar-type">Related Creatures<\/div><span[^>]*><\/span>Pools of Blood</,
+      /class="Monster__sidebar Monster__sidebar--related_creatures"><button[^>]*class="Monster__sidebar-heading[^"]*"[^>]*><span[^>]*><\/span><span class="Monster__sidebar-type">Related Creatures<\/span>Pools of Blood</,
     )
     assert.doesNotMatch(html, /Sidebar body/) // collapsed until clicked
   })
@@ -152,7 +152,7 @@ describe('CreatureStatBlock (render) — sections and sidebars', () => {
 
   it('renders a sidebar with no type data under its plain title', () => {
     const html = render(withSections(sidebar('Pack Tactics')))
-    assert.match(html, /class="Monster__sidebar"><div[^>]*><span[^>]*><\/span>Pack Tactics</)
+    assert.match(html, /class="Monster__sidebar"><button[^>]*><span[^>]*><\/span>Pack Tactics</)
   })
 
   it('renders sidebars and titled prose sections side by side', () => {
@@ -162,4 +162,31 @@ describe('CreatureStatBlock (render) — sections and sidebars', () => {
     assert.match(html, /Pools of Blood/)
     assert.match(html, /Monster__section-title[^>]*><span[^>]*><\/span>Ecology</)
   })
+})
+
+describe('CreatureStatBlock (render) — collapsible headers', () => {
+  // Every collapsible header must be a real button so keyboard and screen-reader
+  // users can open it; the body is unmounted while collapsed.
+  const cases = {
+    'Monster__sidebar-heading': [creature({
+      schema_version: 1.4,
+      sections: [{ type: 'section', name: 'Test Wolf', sections: [{ type: 'section', subtype: 'sidebar', name: 'Pack Tactics', text: 'Body.' }] }],
+    })],
+    'Monster__section-title': [creature({ schema_version: 1.4, sections: [{ type: 'section', name: 'Ecology', text: 'Body.' }] })],
+    'Monster__family-title': [(() => {
+      const data = creature({ schema_version: 1.4 })
+      data.stat_block.creature_type.family = { name: 'Wolves', text: 'Body.' }
+      return data
+    })()],
+    'Monster__template-title': [creature({ schema_version: 1.4 }), { appliedTemplates: [{ name: 'Elite', text: 'Body.' }] }],
+  }
+
+  for (const [cls, [data, opts]] of Object.entries(cases)) {
+    it(`renders ${cls} as a collapsed button`, () => {
+      const html = render(data, opts)
+      assert.match(html, new RegExp(`<button type="button" class="${cls} Monster__collapsible" aria-expanded="false"><span class="Monster__collapse-icon" aria-hidden="true">`))
+      assert.doesNotMatch(html, /aria-controls/)
+      assert.doesNotMatch(html, /Body\./)
+    })
+  }
 })

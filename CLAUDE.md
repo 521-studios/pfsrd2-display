@@ -153,7 +153,7 @@ All visual elements use BEM-style class names under `.Monster__*`. Override in y
 | `.Monster__uma-toggle` | Clickable universal monster ability name (dotted underline) |
 | `.Monster__uma-expansion` | Expanded UMA description box |
 | `.Monster__uma-expansion-title` | UMA name inside expansion |
-| `.Monster__collapsible` | Clickable collapse/expand headers |
+| `.Monster__collapsible` | Collapse/expand header — a `<button>` with `aria-expanded` (focus ring on `:focus-visible`) |
 | `.Monster__collapse-icon` | Triangle toggle indicator (rotates when `--open`) |
 
 ### Template highlighting
