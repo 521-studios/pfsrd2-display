@@ -50,8 +50,7 @@ const ItemCard = ({ data, masked, maskLabel, variant = -1, onVariantChange, patc
     }
   })
 
-  if (!data) { return null }
-
+  // Before the data guard: a masked item may arrive with its ref blanked (non-GM view).
   if (masked) {
     return (
       <div className='Monster Monster--masked'>
@@ -61,6 +60,8 @@ const ItemCard = ({ data, masked, maskLabel, variant = -1, onVariantChange, patc
       </div>
     )
   }
+
+  if (!data) { return null }
 
   // Constructed/derived snapshots and hand-built customs may omit the
   // stat_block wrapper and provide these fields at the top level.
@@ -326,7 +327,7 @@ VariantList.propTypes = {
 }
 
 ItemCard.propTypes = {
-  data: PropTypes.object.isRequired,
+  data: PropTypes.object, // optional when masked: the label renders without it
   masked: PropTypes.bool,
   maskLabel: PropTypes.string,
   variant: PropTypes.number, // selected index into stat_block.variants (-1 = none)
