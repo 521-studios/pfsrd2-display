@@ -4,11 +4,8 @@ import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import CreatureStatBlock from './CreatureStatBlock.js'
 
-// d31m: render the full creature stat block (router → V1_2 / V1_3) against a minimal fixture.
-// The fixture is Bestiary's Wolf cut down to the schema-required fields (perception, skills,
-// ability mods, AC/saves/HP, speed, one Strike). Optional sections (gear, grafts, family,
-// interaction abilities, sections) are omitted so a renderer that stops tolerating their
-// absence fails here.
+// Bestiary's Wolf, trimmed. Optional sections (gear, grafts, family, interaction abilities,
+// sections) are omitted so a renderer that stops tolerating their absence fails here.
 
 const creature = (overrides = {}) => ({
   name: 'Test Wolf',
@@ -95,6 +92,18 @@ describe('CreatureStatBlock (render)', () => {
     })
     assert.doesNotMatch(render(data), /Monster__alternateLink/)
     assert.match(render(data, { onLoadMonster: () => {} }), /Monster__alternateLink"> → Remastered/)
+  })
+
+  it('makes rolls clickable only when onRoll is wired', () => {
+    const data = creature({ schema_version: 1.4 })
+    assert.doesNotMatch(render(data), /Monster__roll/)
+    assert.match(render(data, { onRoll: () => {} }), /Monster__roll">\+7</)
+  })
+
+  it('renders an applied template block per appliedTemplates entry', () => {
+    const html = render(creature({ schema_version: 1.4 }), { appliedTemplates: [{ name: 'Elite' }] })
+    assert.match(html, /Monster__template-title[^>]*>.*Elite Template</)
+    assert.doesNotMatch(render(creature({ schema_version: 1.4 })), /Monster__template/)
   })
 
   it('renders the traits row', () => {
