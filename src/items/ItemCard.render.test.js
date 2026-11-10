@@ -36,6 +36,18 @@ describe('ItemCard masked variant (render)', () => {
     assert.match(html, /Unidentified Item/)
     assert.doesNotMatch(html, /Wand of Fireball/)
   })
+
+  it('renders only the mask label when the item data is blanked (non-GM view)', () => {
+    assert.strictEqual(
+      renderToStaticMarkup(<ItemCard masked maskLabel='a glowing rod' />),
+      '<div class="Monster Monster--masked"><div class="Monster__header"><div class="Monster__name Monster__name--masked">a glowing rod</div></div></div>',
+    )
+    assert.match(renderToStaticMarkup(<ItemCard data={null} masked />), /Unidentified Item/)
+  })
+
+  it('still renders nothing for an unmasked card without data', () => {
+    assert.strictEqual(renderToStaticMarkup(<ItemCard />), '')
+  })
 })
 
 describe('ItemCard unmasked variant (render)', () => {
