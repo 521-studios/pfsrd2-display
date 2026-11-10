@@ -1,29 +1,21 @@
-import React, { useId, useState } from 'react'
+import React from 'react'
 import Markdown from '../../shared/Markdown'
-import CollapsibleHeader from '../../shared/CollapsibleHeader'
+import Collapsible from '../../shared/Collapsible'
 import Sections from './Sections'
 
 const Family = ({ family }) => {
-  const [open, setOpen] = useState(false)
-  const bodyId = useId()
-
   if (!family || !family.name) return null
 
   return (
     <div className="Monster__family">
-      <CollapsibleHeader className="Monster__family-title" open={open} onToggle={() => setOpen(!open)} controls={bodyId}>
-        {family.name}
-      </CollapsibleHeader>
-      {open ? (
-        <div className="Monster__family-body" id={bodyId}>
-          {family.text ? (
-            <div className="Monster__family-text">
-              <Markdown text={family.text} />
-            </div>
-          ) : null}
-          <Sections sections={family.sections} />
-        </div>
-      ) : null}
+      <Collapsible headerClassName="Monster__family-title" header={family.name} bodyClassName="Monster__family-body">
+        {family.text ? (
+          <div className="Monster__family-text">
+            <Markdown text={family.text} />
+          </div>
+        ) : null}
+        <Sections sections={family.sections} />
+      </Collapsible>
     </div>
   )
 }

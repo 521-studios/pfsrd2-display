@@ -165,8 +165,6 @@ describe('CreatureStatBlock (render) — sections and sidebars', () => {
 })
 
 describe('CreatureStatBlock (render) — collapsible headers', () => {
-  // Every collapsible header must be a real button so keyboard and screen-reader
-  // users can open it; the body is unmounted while collapsed.
   const cases = {
     'Monster__sidebar-heading': [creature({
       schema_version: 1.4,

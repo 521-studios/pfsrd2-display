@@ -1,6 +1,6 @@
-import React, { useId, useState } from 'react'
+import React from 'react'
 import Markdown from '../../shared/Markdown'
-import CollapsibleHeader from '../../shared/CollapsibleHeader'
+import Collapsible from '../../shared/Collapsible'
 import Action from './Action'
 
 const AdjustmentsTable = ({ adjustments }) => {
@@ -131,9 +131,6 @@ const TemplateChanges = ({ combinedText, abilityChanges, poolAbilities }) => {
 }
 
 const TemplateStatBlock = ({ template }) => {
-  const [open, setOpen] = useState(false)
-  const bodyId = useId()
-
   if (!template) return null
 
   // Families are the remastered rules carrier for several transforms and
@@ -144,27 +141,22 @@ const TemplateStatBlock = ({ template }) => {
 
   return (
     <div className="Monster__template">
-      <CollapsibleHeader className="Monster__template-title" open={open} onToggle={() => setOpen(!open)} controls={bodyId}>
-        {template.name} Template
-      </CollapsibleHeader>
-      {open ? (
-        <div className="Monster__template-body" id={bodyId}>
-          {template.text ? (
-            <div className="Monster__template-description">
-              <Markdown text={template.text} />
-            </div>
-          ) : null}
-          <TemplateSections sections={template.sections} />
-          <TemplateChanges {...rules} />
-          <AdjustmentsTable adjustments={adjustments} />
-          {template.sources && template.sources.length > 0 ? (
-            <div className="Monster__template-source">
-              Source: {template.sources[0].name}
-              {template.sources[0].page ? `, pg. ${template.sources[0].page}` : ''}
-            </div>
-          ) : null}
-        </div>
-      ) : null}
+      <Collapsible headerClassName="Monster__template-title" header={`${template.name} Template`} bodyClassName="Monster__template-body">
+        {template.text ? (
+          <div className="Monster__template-description">
+            <Markdown text={template.text} />
+          </div>
+        ) : null}
+        <TemplateSections sections={template.sections} />
+        <TemplateChanges {...rules} />
+        <AdjustmentsTable adjustments={adjustments} />
+        {template.sources && template.sources.length > 0 ? (
+          <div className="Monster__template-source">
+            Source: {template.sources[0].name}
+            {template.sources[0].page ? `, pg. ${template.sources[0].page}` : ''}
+          </div>
+        ) : null}
+      </Collapsible>
     </div>
   )
 }
