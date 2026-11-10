@@ -169,7 +169,9 @@ All visual elements use BEM-style class names under `.Monster__*`. Override in y
 | `.Monster__section-title` | Section heading |
 | `.Monster__section-text` | Italic flavor text |
 | `.Monster__sidebar` | Sidebar box (gold left border) |
+| `.Monster__sidebar--<sidebar_type>` | Per-type modifier: `--additional_lore`, `--related_creatures`, `--advice_and_rules`, `--treasure_and_rewards`, `--locations`, `--geb` |
 | `.Monster__sidebar-heading` | Sidebar title |
+| `.Monster__sidebar-type` | Type label above the title ("Related Creatures"); omitted when it equals the title |
 | `.Monster__family` | Monster family container |
 | `.Monster__family-title` | Family name (gold) |
 | `.Monster__template` | Applied template stat block |

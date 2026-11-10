@@ -118,3 +118,48 @@ describe('CreatureStatBlock (render)', () => {
     assert.doesNotMatch(render(creature({ schema_version: 1.4 })), /Monster__changed/)
   })
 })
+
+describe('CreatureStatBlock (render) — sections and sidebars', () => {
+  const sidebar = (name, sidebar_heading, sidebar_type) =>
+    ({ type: 'section', subtype: 'sidebar', name, sidebar_heading, sidebar_type, text: 'Sidebar body.' })
+  // Shapes from pfsrd2-data: the description section is named after the creature;
+  // sidebars nest under it.
+  const withSections = (...sidebars) => creature({
+    schema_version: 1.4,
+    sections: [{ type: 'section', name: 'Test Wolf', text: 'Wolves hunt in packs.', sections: sidebars }],
+  })
+
+  it('renders the creature description open, without a title', () => {
+    const html = render(withSections())
+    assert.match(html, /Monster__section-text"><span class="Markdown">Wolves hunt in packs\./)
+    assert.doesNotMatch(html, /Monster__section-title/)
+  })
+
+  it('shows a sidebar under its own title with the type label above it', () => {
+    const html = render(withSections(sidebar('Pools of Blood', 'Related Creatures', 'related_creatures')))
+    assert.match(
+      html,
+      /class="Monster__sidebar Monster__sidebar--related_creatures"><div class="Monster__sidebar-heading[^"]*"><div class="Monster__sidebar-type">Related Creatures<\/div><span[^>]*><\/span>Pools of Blood</,
+    )
+    assert.doesNotMatch(html, /Sidebar body/) // collapsed until clicked
+  })
+
+  it('omits the type label when it would repeat the title', () => {
+    const html = render(withSections(sidebar('Locations', 'Locations', 'locations')))
+    assert.match(html, /Monster__sidebar--locations/)
+    assert.doesNotMatch(html, /Monster__sidebar-type/)
+  })
+
+  it('renders a sidebar with no type data under its plain title', () => {
+    const html = render(withSections(sidebar('Pack Tactics')))
+    assert.match(html, /class="Monster__sidebar"><div[^>]*><span[^>]*><\/span>Pack Tactics</)
+  })
+
+  it('renders sidebars and titled prose sections side by side', () => {
+    const data = withSections(sidebar('Pools of Blood', 'Related Creatures', 'related_creatures'))
+    data.sections.push({ type: 'section', name: 'Ecology', text: 'Lives in forests.' })
+    const html = render(data)
+    assert.match(html, /Pools of Blood/)
+    assert.match(html, /Monster__section-title[^>]*><span[^>]*><\/span>Ecology</)
+  })
+})
