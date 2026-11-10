@@ -1,28 +1,21 @@
-import React, { useState } from 'react'
+import React from 'react'
 import Markdown from '../../shared/Markdown'
+import Collapsible from '../../shared/Collapsible'
 import Sections from './Sections'
 
 const Family = ({ family }) => {
-  const [open, setOpen] = useState(false)
-
   if (!family || !family.name) return null
 
   return (
     <div className="Monster__family">
-      <div className="Monster__family-title Monster__collapsible" onClick={() => setOpen(!open)}>
-        <span className={`Monster__collapse-icon${open ? ' Monster__collapse-icon--open' : ''}`} />
-        {family.name}
-      </div>
-      {open ? (
-        <div className="Monster__family-body">
-          {family.text ? (
-            <div className="Monster__family-text">
-              <Markdown text={family.text} />
-            </div>
-          ) : null}
-          <Sections sections={family.sections} />
-        </div>
-      ) : null}
+      <Collapsible headerClassName="Monster__family-title" header={family.name} bodyClassName="Monster__family-body">
+        {family.text ? (
+          <div className="Monster__family-text">
+            <Markdown text={family.text} />
+          </div>
+        ) : null}
+        <Sections sections={family.sections} />
+      </Collapsible>
     </div>
   )
 }

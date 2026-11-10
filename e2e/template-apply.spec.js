@@ -1,17 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { searchAndSelect, trackApiErrors } from './helpers/harness.js'
 
-// Applying a template must (a) re-render the stat block via the templates/apply
-// API and (b) highlight what changed — the library's headline feature. We assert
-// the .Monster__changed highlight class appears, which only the patches prop
-// produces, so this proves the whole apply→merge-patches→highlight chain.
-test('applying a template highlights the changed values', async ({ page }) => {
-  const apiErrors = trackApiErrors(page)
-  await page.goto('/', { waitUntil: 'domcontentloaded' })
-
-  const statBlock = await searchAndSelect(page, 'goblin', 'Goblin Bat-Dog')
-  await expect(statBlock.locator('.Monster__changed')).toHaveCount(0) // nothing changed yet
-
+const applyTemplate = async (page) => {
   // Pick a real template (skip the disabled "+ Add template" placeholder).
   // The template list loads via a paginated fetch that only STARTS once the
   // creature is selected, so web-first WAIT for a real option to exist before
@@ -25,6 +15,19 @@ test('applying a template highlights the changed values', async ({ page }) => {
   // Prefer Elite (universal adjustment) for a stable, always-present choice.
   const choice = optionLabels.find((l) => /elite/i.test(l)) || optionLabels[0]
   await select.selectOption({ label: choice })
+}
+
+// Applying a template must (a) re-render the stat block via the templates/apply
+// API and (b) highlight what changed — the library's headline feature. We assert
+// the .Monster__changed highlight class appears, which only the patches prop
+// produces, so this proves the whole apply→merge-patches→highlight chain.
+test('applying a template highlights the changed values', async ({ page }) => {
+  const apiErrors = trackApiErrors(page)
+  await page.goto('/', { waitUntil: 'domcontentloaded' })
+
+  const statBlock = await searchAndSelect(page, 'goblin', 'Goblin Bat-Dog')
+  await expect(statBlock.locator('.Monster__changed')).toHaveCount(0) // nothing changed yet
+  await applyTemplate(page)
 
   // The applied template highlights at least one modified value.
   await expect(statBlock.locator('.Monster__changed').first()).toBeVisible()
@@ -35,4 +38,23 @@ test('applying a template highlights the changed values', async ({ page }) => {
   await expect(statBlock.locator('.Monster__template-title').first()).toContainText('Template')
 
   expect(apiErrors, 'no pfsrd2 API call should 4xx/5xx').toEqual([])
+})
+
+test('a collapsible header opens and closes from the keyboard', async ({ page }) => {
+  await page.goto('/', { waitUntil: 'domcontentloaded' })
+  const statBlock = await searchAndSelect(page, 'goblin', 'Goblin Bat-Dog')
+  await applyTemplate(page)
+
+  const header = statBlock.getByRole('button', { name: /Template$/ }).first()
+  await expect(header).toHaveAttribute('aria-expanded', 'false')
+
+  await header.focus()
+  await page.keyboard.press('Enter')
+  await expect(header).toHaveAttribute('aria-expanded', 'true')
+  const bodyId = await header.getAttribute('aria-controls')
+  await expect(page.locator(`[id="${bodyId}"]`)).toBeVisible()
+
+  await page.keyboard.press('Space')
+  await expect(header).toHaveAttribute('aria-expanded', 'false')
+  await expect(page.locator(`[id="${bodyId}"]`)).toHaveCount(0)
 })

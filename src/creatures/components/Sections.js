@@ -1,26 +1,23 @@
-import React, { useState } from 'react'
+import React from 'react'
 import Markdown from '../../shared/Markdown'
+import Collapsible from '../../shared/Collapsible'
 import Ability from './Ability'
 import { useDisplay } from '../../context/DisplayContext'
 
 const Sidebar = ({ section }) => {
-  const [open, setOpen] = useState(false)
   // sidebar_heading is the book's type banner ("Related Creatures"); name is the sidebar's own title.
   const typeLabel = section.sidebar_heading !== section.name ? section.sidebar_heading : null
   const typeClass = section.sidebar_type ? ` Monster__sidebar--${section.sidebar_type}` : ''
 
   return (
     <div className={`Monster__sidebar${typeClass}`}>
-      <div className="Monster__sidebar-heading Monster__collapsible" onClick={() => setOpen(!open)}>
-        {typeLabel ? <div className="Monster__sidebar-type">{typeLabel}</div> : null}
-        <span className={`Monster__collapse-icon${open ? ' Monster__collapse-icon--open' : ''}`} />
-        {section.name}
-      </div>
-      {open ? (
-        <div className="Monster__sidebar-body">
-          {section.text ? <Markdown text={section.text} /> : null}
-        </div>
-      ) : null}
+      <Collapsible
+        headerClassName="Monster__sidebar-heading"
+        header={<>{typeLabel ? <span className="Monster__sidebar-type">{typeLabel}</span> : null}{section.name}</>}
+        bodyClassName="Monster__sidebar-body"
+      >
+        {section.text ? <Markdown text={section.text} /> : null}
+      </Collapsible>
     </div>
   )
 }
@@ -34,9 +31,6 @@ const Section = ({ section, isTopLevel }) => {
 const ProseSection = ({ section, isTopLevel }) => {
   const { monsterName } = useDisplay()
   const hasTitle = isTopLevel ? section.name !== monsterName : !!section.name
-  const collapsible = hasTitle
-
-  const [open, setOpen] = useState(!collapsible)
 
   const abilities = section.abilities
 
@@ -63,12 +57,8 @@ const ProseSection = ({ section, isTopLevel }) => {
   return (
     <div className="Monster__section">
       {hasTitle ? (
-        <div className="Monster__section-title Monster__collapsible" onClick={() => setOpen(!open)}>
-          <span className={`Monster__collapse-icon${open ? ' Monster__collapse-icon--open' : ''}`} />
-          {section.name}
-        </div>
-      ) : null}
-      {open ? content : null}
+        <Collapsible headerClassName="Monster__section-title" header={section.name}>{content}</Collapsible>
+      ) : content}
     </div>
   )
 }
