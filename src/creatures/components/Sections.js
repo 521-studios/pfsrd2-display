@@ -5,12 +5,17 @@ import { useDisplay } from '../../context/DisplayContext'
 
 const Sidebar = ({ section }) => {
   const [open, setOpen] = useState(false)
+  // sidebar_heading is the book's type banner ("Related Creatures"); name is the sidebar's own title.
+  const title = section.name || section.sidebar_heading
+  const typeLabel = section.sidebar_heading && section.sidebar_heading !== title ? section.sidebar_heading : null
+  const typeClass = section.sidebar_type ? ` Monster__sidebar--${section.sidebar_type}` : ''
 
   return (
-    <div className="Monster__sidebar">
+    <div className={`Monster__sidebar${typeClass}`}>
       <div className="Monster__sidebar-heading Monster__collapsible" onClick={() => setOpen(!open)}>
+        {typeLabel ? <div className="Monster__sidebar-type">{typeLabel}</div> : null}
         <span className={`Monster__collapse-icon${open ? ' Monster__collapse-icon--open' : ''}`} />
-        {section.sidebar_heading || section.name}
+        {title}
       </div>
       {open ? (
         <div className="Monster__sidebar-body">
@@ -23,11 +28,11 @@ const Sidebar = ({ section }) => {
 
 const Section = ({ section, isTopLevel }) => {
   if (!section) return null
+  if (section.subtype === 'sidebar') return <Sidebar section={section} />
+  return <ProseSection section={section} isTopLevel={isTopLevel} />
+}
 
-  if (section.subtype === 'sidebar') {
-    return <Sidebar section={section} />
-  }
-
+const ProseSection = ({ section, isTopLevel }) => {
   const { monsterName } = useDisplay()
   const hasTitle = isTopLevel ? section.name !== monsterName : !!section.name
   const collapsible = hasTitle
