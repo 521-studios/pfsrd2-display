@@ -110,6 +110,30 @@
   /* Consumers can override to differentiate labels from names */
 }
 
+/* Inline text-styled buttons (UMA toggles, picker remove/clear): native
+   buttons for keyboard + screen readers, reset to read as text. Declared
+   before the per-class rules below so their font-size/color still win. */
+.Monster__uma-toggle,
+.TemplatePicker__remove,
+.TemplatePicker__clear,
+.ItemSlotPicker__remove,
+.ItemSlotPicker__clear {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+}
+
+.Monster__uma-toggle:focus-visible,
+.TemplatePicker__remove:focus-visible,
+.TemplatePicker__clear:focus-visible,
+.ItemSlotPicker__remove:focus-visible,
+.ItemSlotPicker__clear:focus-visible {
+  outline: 2px solid #F79639;
+  outline-offset: 1px;
+}
+
 /* Universal Monster Ability expansion */
 .Monster__uma-toggle {
   cursor: pointer;

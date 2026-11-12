@@ -90,3 +90,13 @@ describe('Ability (render) — no stat line', () => {
     assert.match(html, /<span class="Markdown">A quiet aura\.<\/span>/)
   })
 })
+
+// 1ro0: the UMA name is a disclosure — a native button carrying aria-expanded.
+describe('Ability UMA toggle', () => {
+  it('renders a collapsed disclosure button for a UMA ability', () => {
+    const html = renderToStaticMarkup(
+      React.createElement(Ability, { ability: { name: 'Darkvision', universal_monster_ability: { name: 'Darkvision', text: 'x' } } }),
+    )
+    assert.match(html, /<button type="button" class="Monster__uma-toggle" aria-expanded="false"><strong class="Monster__ability-name">Darkvision<\/strong><\/button>/)
+  })
+})

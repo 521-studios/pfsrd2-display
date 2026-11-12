@@ -48,21 +48,22 @@ export default function TemplatePicker({
             <span key={i} className="TemplatePicker__tag" data-testid="template-tag">
               {entry.template.name}
               {i === stack.length - 1 && (
-                <span
+                <button
+                  type="button"
                   className="TemplatePicker__remove"
                   data-testid="template-remove"
+                  aria-label={`Remove ${entry.template.name}`}
                   onClick={onRemoveLast}
                 >
-                  {' '}
                   ×
-                </span>
+                </button>
               )}
             </span>
           ))}
           {stack.length > 1 && (
-            <span className="TemplatePicker__clear" onClick={onClearAll}>
+            <button type="button" className="TemplatePicker__clear" onClick={onClearAll}>
               Clear all
-            </span>
+            </button>
           )}
         </div>
       )}

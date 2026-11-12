@@ -38,7 +38,7 @@ const Senses = (props) => {
         {special_senses ? special_senses.map((ss, i) => {
           return (
             <Changed path={`/stat_block/senses/special_senses/${i}`} key={i}>
-              <SpecialSense specialSense={ss} i={i} onToggleUMA={toggleUMA}>
+              <SpecialSense specialSense={ss} i={i} onToggleUMA={toggleUMA} umaExpanded={!!expandedUMAs[ss.name]}>
                 {comma(i, special_senses)}
               </SpecialSense>
             </Changed>

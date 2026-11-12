@@ -59,16 +59,16 @@ export default function ItemSlotPicker({
             <span key={i} className="ItemSlotPicker__tag" data-testid="applied-tag">
               {entry.applied}
               {i === stack.length - 1 && (
-                <span className="ItemSlotPicker__remove" data-testid="applied-remove" onClick={onRemoveLast}>
-                  {' '}×
-                </span>
+                <button type="button" className="ItemSlotPicker__remove" data-testid="applied-remove" aria-label={`Remove ${entry.applied}`} onClick={onRemoveLast}>
+                  ×
+                </button>
               )}
             </span>
           ))}
           {stack.length > 1 && (
-            <span className="ItemSlotPicker__clear" data-testid="applied-clear" onClick={onClearAll}>
+            <button type="button" className="ItemSlotPicker__clear" data-testid="applied-clear" onClick={onClearAll}>
               Clear all
-            </span>
+            </button>
           )}
         </div>
       )}

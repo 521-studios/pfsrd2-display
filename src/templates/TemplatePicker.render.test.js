@@ -38,6 +38,9 @@ describe('TemplatePicker (render)', () => {
     assert.match(html, /Clear all/) // shown because stack length > 1
     // exactly one remove hook (on the last tag)
     assert.equal((html.match(/data-testid="template-remove"/g) || []).length, 1)
+    // 1ro0: native buttons, so keyboard + screen readers can operate them
+    assert.match(html, /<button type="button" class="TemplatePicker__remove" data-testid="template-remove" aria-label="Remove Fire">/)
+    assert.match(html, /<button type="button" class="TemplatePicker__clear">Clear all<\/button>/)
   })
 
   it('renders no stack region when nothing is applied', () => {

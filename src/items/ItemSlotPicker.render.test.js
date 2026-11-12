@@ -77,7 +77,9 @@ describe('ItemSlotPicker', () => {
     )
     assert.match(html, /Weapon Potency \(\+1\)/)
     assert.match(html, /data-testid="applied-tag"/)
-    assert.match(html, /Clear all/)
+    // 1ro0: native buttons, so keyboard + screen readers can operate them
+    assert.match(html, /<button type="button" class="ItemSlotPicker__remove" data-testid="applied-remove" aria-label="Remove Striking">/)
+    assert.match(html, /<button type="button" class="ItemSlotPicker__clear" data-testid="applied-clear">Clear all<\/button>/)
   })
 
   it('renders nothing without eligibility', () => {
