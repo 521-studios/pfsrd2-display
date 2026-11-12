@@ -2,7 +2,7 @@ import { describe, it } from 'node:test'
 import assert from 'node:assert'
 import React from 'react'
 import { renderToStaticMarkup, renderToString } from 'react-dom/server'
-import ItemSlotPicker from './ItemSlotPicker.js'
+import ItemSlotPicker, { materialGradeOptions } from './ItemSlotPicker.js'
 
 const eligibility = {
   item: { game_id: 'rap', name: 'Rapier', host: 'weapon' },
@@ -78,6 +78,65 @@ describe('ItemSlotPicker', () => {
     assert.match(html, /Weapon Potency \(\+1\)/)
     assert.match(html, /data-testid="applied-tag"/)
     assert.match(html, /Clear all/)
+  })
+
+  it('gives a material with several grade_prices a grade step; one without stays a direct Add (76bn)', () => {
+    const duskwood = {
+      game_id: 'dusk',
+      name: 'Duskwood Weapon',
+      grade_prices: [
+        { grade: 'high', name: 'Duskwood Weapon (High-Grade)', level: 17, price_cp: 1350000, cp_per_bulk: 135000, per_bulk_text: '+1350 gp per Bulk' },
+        { grade: 'standard', name: 'Duskwood Weapon (Standard-Grade)', level: 11, price_cp: 140000, cp_per_bulk: 14000, per_bulk_text: '+140 gp per Bulk' },
+      ],
+    }
+    const html = renderToStaticMarkup(
+      React.createElement(ItemSlotPicker, { eligibility: { ...eligibility, materials: [duskwood, ...eligibility.materials] }, onApply: () => {} }),
+    )
+    assert.match(html, /Duskwood Weapon<\/span><button[^>]*data-testid="grade-open"[^>]*>Choose grade<\/button>/)
+    assert.match(html, /Cold Iron<\/span><span[^>]*>precious<\/span><button[^>]*data-testid="apply-candidate"[^>]*>Add<\/button>/)
+  })
+
+  it('a material with a single grade_prices row applies directly (no grade step)', () => {
+    const one = { game_id: 'buck', name: 'Duskwood Buckler', grade_prices: [{ grade: 'standard', name: 'Duskwood Buckler (Standard-Grade)', level: 8, price_cp: 40000, form: 'buckler' }] }
+    const html = renderToStaticMarkup(React.createElement(ItemSlotPicker, { eligibility: { item: eligibility.item, materials: [one] }, onApply: () => {} }))
+    assert.match(html, /Duskwood Buckler<\/span><button[^>]*data-testid="apply-candidate"[^>]*>Add<\/button>/)
+    assert.doesNotMatch(html, /grade-open/)
+  })
+
+  it('the Choose grade toggle reports its collapsed state', () => {
+    const html = renderToStaticMarkup(React.createElement(ItemSlotPicker, { eligibility, onApply: () => {} }))
+    assert.match(html, /aria-expanded="false"[^>]*>Choose grade</)
+  })
+
+  it('materialGradeOptions sorts by level and labels grade, shield form and price (76bn)', () => {
+    const opts = materialGradeOptions({
+      grade_prices: [
+        { grade: 'high', name: 'Duskwood Weapon (High-Grade)', level: 17, price_cp: 1350000, cp_per_bulk: 135000, per_bulk_text: '+1350 gp per Bulk' },
+        { grade: 'standard', name: 'Duskwood Weapon (Standard-Grade)', level: 11, price_cp: 140000, cp_per_bulk: 14000, per_bulk_text: '+140 gp per Bulk' },
+      ],
+    })
+    assert.deepStrictEqual(opts.map((o) => [o.label, o.price, o.grade]), [
+      ['Standard · Item 11', '1,400 gp +140 gp per Bulk', 'standard'],
+      ['High · Item 17', '13,500 gp +1350 gp per Bulk', 'high'],
+    ])
+    assert.equal(opts[0].row.cp_per_bulk, 14000) // the raw row reaches onApply as gradePrice
+    const [buckler] = materialGradeOptions({
+      grade_prices: [{ grade: 'standard', name: 'Duskwood Buckler (Standard-Grade)', level: 8, price_cp: 40000, form: 'tower_shield' }],
+    })
+    assert.deepStrictEqual([buckler.label, buckler.price], ['Standard tower shield · Item 8', '400 gp'])
+    assert.deepStrictEqual(materialGradeOptions({ name: 'Cold Iron' }), []) // no grade_prices (older API)
+    // Fallbacks: no grade → the row name; no level → no "· Item" suffix (sorted first);
+    // price is whatever of price_cp / per_bulk_text is present.
+    const odd = materialGradeOptions({
+      grade_prices: [
+        { name: 'Odd Thing', level: 3, per_bulk_text: '+1 gp per Bulk' },
+        { grade: 'standard', name: 'Levelless', price_cp: 100 },
+      ],
+    })
+    assert.deepStrictEqual(odd.map((o) => [o.label, o.price]), [
+      ['Standard', '1 gp'],
+      ['Odd Thing · Item 3', '+1 gp per Bulk'],
+    ])
   })
 
   it('renders nothing without eligibility', () => {
