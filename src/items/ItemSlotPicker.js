@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import PropTypes from 'prop-types'
 import Markdown from '../shared/Markdown'
+import { formatGp } from '../shared/pf2e'
 
 // ItemSlotPicker is the "customize this item" panel: browse the runes, materials,
 // and (for holders) spells that can be applied to an item and apply them, naming
@@ -12,8 +13,9 @@ import Markdown from '../shared/Markdown'
 //
 // Grouped, always-visible sections (fundamental runes / property runes / materials
 // / spells) rather than a flat dropdown, so the GM browses what fits without
-// knowing names. A graded rune (grades.length > 1) reveals an inline grade step
-// before applying — nothing is applied until a grade is chosen (no wrong-grade flash).
+// knowing names. A graded rune (grades.length > 1) or a material with several
+// grade_prices rows reveals an inline grade step before applying, so nothing is
+// applied until a grade is chosen (no wrong-grade flash).
 export default function ItemSlotPicker({
   eligibility,
   name = '',
@@ -94,19 +96,37 @@ function RuneSection({ title, candidates, onApply, loading }) {
 
 function CandidateRow({ candidate, onApply, loading }) {
   const grades = candidate.grades || []
-  const graded = grades.length > 1
-  const [open, setOpen] = useState(false)
-  // Default the grade step to the LOWEST grade by level (matching gradeDescriptor's
-  // "Item N+"), not grades[0] — the grades array isn't assumed to be sorted.
-  const [grade, setGrade] = useState(graded ? lowestLevel(grades) : undefined)
+  // A rune's grade is its level. Default to the LOWEST level (matching
+  // gradeDescriptor's "Item N+"); the grades array isn't assumed sorted.
+  const options = grades.map((g) => ({ key: g.level, label: `Item ${g.level}`, price: g.price, grade: g.level }))
+  return (
+    <GradeStepRow
+      id={candidate.game_id}
+      name={candidate.name}
+      aside={<span className="ItemSlotPicker__item-desc">{gradeDescriptor(grades)}</span>}
+      options={options}
+      defaultKey={lowestLevel(grades)}
+      // A single-grade rune applies with its level; an ungraded one with none.
+      onApply={(opt) => onApply(candidate, { grade: opt ? opt.grade : undefined })}
+      loading={loading}
+    />
+  )
+}
 
-  const apply = (level) => onApply(candidate, { grade: level })
+// GradeStepRow is one applicable row: a direct "Add" when there are 0-1 options,
+// or a "Choose grade" step (radios + Apply) when there are several, so nothing is
+// applied until a grade is chosen. Shared by runes and materials.
+function GradeStepRow({ id, name, aside, options, defaultKey, onApply, loading }) {
+  const graded = options.length > 1
+  const [open, setOpen] = useState(false)
+  const [key, setKey] = useState(graded ? defaultKey : undefined)
+  const chosen = options.find((o) => o.key === key)
 
   return (
     <li className="ItemSlotPicker__item">
       <div className="ItemSlotPicker__item-row">
-        <span className="ItemSlotPicker__item-name">{candidate.name}</span>
-        <span className="ItemSlotPicker__item-desc">{gradeDescriptor(grades)}</span>
+        <span className="ItemSlotPicker__item-name">{name}</span>
+        {aside}
         {graded ? (
           <button
             type="button"
@@ -123,32 +143,27 @@ function CandidateRow({ candidate, onApply, loading }) {
             className="ItemSlotPicker__add"
             data-testid="apply-candidate"
             disabled={loading}
-            onClick={() => apply(grades.length === 1 ? grades[0].level : undefined)}
+            onClick={() => onApply(options[0])}
           >
             Add
           </button>
         )}
       </div>
       {graded && open ? (
-        <div className="ItemSlotPicker__grades" role="radiogroup" aria-label={`Grade for ${candidate.name}`}>
-          {grades.map((g) => (
-            <label key={g.level} className="ItemSlotPicker__grade">
-              <input
-                type="radio"
-                name={`grade-${candidate.game_id}`}
-                checked={grade === g.level}
-                onChange={() => setGrade(g.level)}
-              />
-              <span className="ItemSlotPicker__grade-level">Item {g.level}</span>
-              {g.price ? <span className="ItemSlotPicker__grade-price">{g.price}</span> : null}
+        <div className="ItemSlotPicker__grades" role="radiogroup" aria-label={`Grade for ${name}`}>
+          {options.map((o) => (
+            <label key={o.key} className="ItemSlotPicker__grade">
+              <input type="radio" name={`grade-${id}`} checked={key === o.key} onChange={() => setKey(o.key)} />
+              <span className="ItemSlotPicker__grade-level">{o.label}</span>
+              {o.price ? <span className="ItemSlotPicker__grade-price">{o.price}</span> : null}
             </label>
           ))}
           <button
             type="button"
             className="ItemSlotPicker__apply-grade"
             data-testid="apply-grade"
-            disabled={loading}
-            onClick={() => { apply(grade); setOpen(false) }}
+            disabled={loading || !chosen}
+            onClick={() => { onApply(chosen); setOpen(false) }}
           >
             Apply
           </button>
@@ -164,26 +179,48 @@ function MaterialSection({ materials, onApply, loading }) {
     <section className="ItemSlotPicker__section">
       <h4 className="ItemSlotPicker__section-title">Materials</h4>
       <ul className="ItemSlotPicker__list">
-        {materials.map((m) => (
-          <li key={m.game_id} className="ItemSlotPicker__item">
-            <div className="ItemSlotPicker__item-row">
-              <span className="ItemSlotPicker__item-name">{m.name}</span>
-              {m.precious ? <span className="ItemSlotPicker__badge">precious</span> : null}
-              <button
-                type="button"
-                className="ItemSlotPicker__add"
-                data-testid="apply-candidate"
-                disabled={loading}
-                onClick={() => onApply(m, {})}
-              >
-                Add
-              </button>
-            </div>
-          </li>
-        ))}
+        {materials.map((m) => {
+          const options = materialGradeOptions(m)
+          return (
+            <GradeStepRow
+              key={m.game_id}
+              id={m.game_id}
+              name={m.name}
+              aside={m.precious ? <span className="ItemSlotPicker__badge">precious</span> : null}
+              options={options}
+              defaultKey={options.length ? options[0].key : undefined}
+              // The consumer gets the chosen grade_prices row (price_cp, cp_per_bulk,
+              // form) to price the item; /apply ignores ?grade for materials. No
+              // grade_prices (older API) applies ungraded, as before.
+              onApply={(opt) => onApply(m, opt ? { grade: opt.grade, gradePrice: opt.row } : {})}
+              loading={loading}
+            />
+          )
+        })}
       </ul>
     </section>
   )
+}
+
+// materialGradeOptions turns a material's /eligible grade_prices into grade-step
+// options, lowest level first: "Standard · Item 11" (or "Standard buckler" for a
+// shield form) priced "1,400 gp +140 gp per Bulk".
+export function materialGradeOptions(material) {
+  const rows = (material && material.grade_prices) || []
+  return [...rows]
+    .sort((a, b) => (a.level ?? 0) - (b.level ?? 0))
+    .map((row) => {
+      const grade = row.grade ? row.grade[0].toUpperCase() + row.grade.slice(1) : row.name
+      const form = row.form ? ` ${row.form.replace(/_/g, ' ')}` : ''
+      const price = [formatGp(row.price_cp), row.per_bulk_text].filter(Boolean).join(' ')
+      return {
+        key: row.name,
+        label: `${grade}${form}${row.level != null ? ` · Item ${row.level}` : ''}`,
+        price,
+        grade: row.grade,
+        row,
+      }
+    })
 }
 
 // The spell slot shows the holder's constraints (the "rules that aren't fields")
@@ -280,7 +317,9 @@ ItemSlotPicker.propTypes = {
   onNameChange: PropTypes.func,
   // stack entries carry at least { applied } — the label from the apply response.
   stack: PropTypes.arrayOf(PropTypes.shape({ applied: PropTypes.string })),
-  onApply: PropTypes.func.isRequired, // (candidate, { grade }) => void
+  // (candidate, { grade }) => void. A graded material also passes gradePrice: its chosen
+  // /eligible grade_prices row ({ grade, name, level, price_cp, cp_per_bulk?, form? }).
+  onApply: PropTypes.func.isRequired,
   onApplySpell: PropTypes.func, // (spell) => void
   onRemoveLast: PropTypes.func,
   onClearAll: PropTypes.func,
@@ -295,5 +334,14 @@ RuneSection.propTypes = {
   loading: PropTypes.bool,
 }
 CandidateRow.propTypes = { candidate: candidateShape, onApply: PropTypes.func, loading: PropTypes.bool }
+GradeStepRow.propTypes = {
+  id: PropTypes.string,
+  name: PropTypes.string,
+  aside: PropTypes.node,
+  options: PropTypes.arrayOf(PropTypes.shape({ key: PropTypes.any, label: PropTypes.string, price: PropTypes.string })),
+  defaultKey: PropTypes.any,
+  onApply: PropTypes.func,
+  loading: PropTypes.bool,
+}
 MaterialSection.propTypes = { materials: PropTypes.array, onApply: PropTypes.func, loading: PropTypes.bool }
 SpellSection.propTypes = { spells: PropTypes.object, searchSpells: PropTypes.func, onApplySpell: PropTypes.func, loading: PropTypes.bool }
