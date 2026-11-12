@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useRef } from 'react'
 import PropTypes from 'prop-types'
 
 // TemplatePicker is the presentational control for applying/stacking templates:
@@ -17,11 +17,15 @@ export default function TemplatePicker({
   loading = false,
   label = 'Templates:',
 }) {
+  // Remove/clear unmount the clicked button; hand focus back to the select.
+  const selectRef = useRef(null)
+  const refocus = (fn) => () => { fn(); selectRef.current?.focus() }
   return (
     <div className="TemplatePicker">
       <div className="TemplatePicker__row">
         <strong className="TemplatePicker__label">{label}</strong>
         <select
+          ref={selectRef}
           className="TemplatePicker__select"
           data-testid="template-select"
           disabled={loading}
@@ -53,7 +57,7 @@ export default function TemplatePicker({
                   className="TemplatePicker__remove"
                   data-testid="template-remove"
                   aria-label={`Remove ${entry.template.name}`}
-                  onClick={onRemoveLast}
+                  onClick={refocus(onRemoveLast)}
                 >
                   ×
                 </button>
@@ -61,7 +65,7 @@ export default function TemplatePicker({
             </span>
           ))}
           {stack.length > 1 && (
-            <button type="button" className="TemplatePicker__clear" onClick={onClearAll}>
+            <button type="button" className="TemplatePicker__clear" onClick={refocus(onClearAll)}>
               Clear all
             </button>
           )}

@@ -19,4 +19,10 @@ describe('inline UMA toggles', () => {
       assert.match(renderToStaticMarkup(render(true)), /<button type="button" class="Monster__uma-toggle" aria-expanded="true">Scent<\/button>/)
     })
   }
+
+  it('renders plain text, not a dead button, when no toggle handler is passed (Languages)', () => {
+    const html = renderToStaticMarkup(React.createElement(InlineAbility, { ability: { name: 'Telepathy', universal_monster_ability: uma } }))
+    assert.doesNotMatch(html, /<button/)
+    assert.match(html, /Telepathy/)
+  })
 })

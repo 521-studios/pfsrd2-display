@@ -7,9 +7,9 @@ const SpecialSense = (props) => {
 
   if (!specialSense) { return null }
 
-  const hasUMA = !!specialSense.universal_monster_ability
+  const hasUMA = !!specialSense.universal_monster_ability && !!onToggleUMA
   const nameEl = hasUMA ? (
-    <button type="button" className="Monster__uma-toggle" aria-expanded={umaExpanded} onClick={() => onToggleUMA && onToggleUMA(specialSense.name)}>
+    <button type="button" className="Monster__uma-toggle" aria-expanded={umaExpanded} onClick={() => onToggleUMA(specialSense.name)}>
       {specialSense.name}
     </button>
   ) : specialSense.name

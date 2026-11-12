@@ -150,7 +150,7 @@ All visual elements use BEM-style class names under `.Monster__*`. Override in y
 |-------|---------|
 | `.Monster__roll` | Clickable rollable values (dice rolls) |
 | `.Monster__alternateLink` | Edition switch link |
-| `.Monster__uma-toggle` | Clickable universal monster ability name (dotted underline) |
+| `.Monster__uma-toggle` | Universal monster ability name — a `<button>` with `aria-expanded` (dotted underline; in abilities it wraps `.Monster__ability-name`) |
 | `.Monster__uma-expansion` | Expanded UMA description box |
 | `.Monster__uma-expansion-title` | UMA name inside expansion |
 | `.Monster__collapsible` | Collapse/expand header — a `<button>` with `aria-expanded` (focus ring on `:focus-visible`) |

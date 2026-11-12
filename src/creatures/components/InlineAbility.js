@@ -13,9 +13,10 @@ const InlineAbility = (props) => {
     return ''
   }
 
-  const hasUMA = !!ability.universal_monster_ability
+  // No handler (e.g. Languages) → plain text, not a button that does nothing.
+  const hasUMA = !!ability.universal_monster_ability && !!onToggleUMA
   const nameEl = hasUMA ? (
-    <button type="button" className="Monster__uma-toggle" aria-expanded={umaExpanded} onClick={() => onToggleUMA && onToggleUMA(ability.name)}>
+    <button type="button" className="Monster__uma-toggle" aria-expanded={umaExpanded} onClick={() => onToggleUMA(ability.name)}>
       {ability.name}
     </button>
   ) : ability.name
