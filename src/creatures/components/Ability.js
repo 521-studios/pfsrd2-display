@@ -166,9 +166,9 @@ const Ability = (props) => {
 
   const hasUMA = !!ability.universal_monster_ability
   const nameEl = hasUMA ? (
-    <strong className="Monster__ability-name Monster__uma-toggle" onClick={() => setUmaExpanded(!umaExpanded)}>
-      {ability.name}
-    </strong>
+    <button type="button" className="Monster__uma-toggle" aria-expanded={umaExpanded} onClick={() => setUmaExpanded(!umaExpanded)}>
+      <strong className="Monster__ability-name">{ability.name}</strong>
+    </button>
   ) : (
     <strong className="Monster__ability-name">{ability.name}</strong>
   )

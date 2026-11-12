@@ -3,15 +3,15 @@ import Range from './Range'
 import Modifiers from './Modifiers'
 
 const SpecialSense = (props) => {
-  const { specialSense, i, children, onToggleUMA } = props
+  const { specialSense, i, children, onToggleUMA, umaExpanded = false } = props
 
   if (!specialSense) { return null }
 
-  const hasUMA = !!specialSense.universal_monster_ability
+  const hasUMA = !!specialSense.universal_monster_ability && !!onToggleUMA
   const nameEl = hasUMA ? (
-    <span className="Monster__uma-toggle" onClick={() => onToggleUMA && onToggleUMA(specialSense.name)}>
+    <button type="button" className="Monster__uma-toggle" aria-expanded={umaExpanded} onClick={() => onToggleUMA(specialSense.name)}>
       {specialSense.name}
-    </span>
+    </button>
   ) : specialSense.name
 
   return (

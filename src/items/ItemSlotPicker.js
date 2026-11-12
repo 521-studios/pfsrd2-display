@@ -28,13 +28,16 @@ export default function ItemSlotPicker({
   searchSpells,
   loading = false,
 }) {
+  // Remove/clear unmount the clicked button; hand focus back to the panel.
+  const rootRef = useRef(null)
   if (!eligibility) return null
+  const refocus = (fn) => () => { fn(); rootRef.current?.focus() }
   const { item, runes, materials, spells } = eligibility
   const fundamental = (runes && runes.fundamental) || []
   const property = (runes && runes.property) || []
 
   return (
-    <div className="ItemSlotPicker" data-testid="item-slot-picker">
+    <div className="ItemSlotPicker" data-testid="item-slot-picker" ref={rootRef} tabIndex={-1}>
       <label className="ItemSlotPicker__name">
         <span className="ItemSlotPicker__name-label">Name</span>
         <input
@@ -61,16 +64,16 @@ export default function ItemSlotPicker({
             <span key={i} className="ItemSlotPicker__tag" data-testid="applied-tag">
               {entry.applied}
               {i === stack.length - 1 && (
-                <span className="ItemSlotPicker__remove" data-testid="applied-remove" onClick={onRemoveLast}>
-                  {' '}×
-                </span>
+                <button type="button" className="ItemSlotPicker__remove" data-testid="applied-remove" aria-label={`Remove ${entry.applied}`} onClick={refocus(onRemoveLast)}>
+                  ×
+                </button>
               )}
             </span>
           ))}
           {stack.length > 1 && (
-            <span className="ItemSlotPicker__clear" data-testid="applied-clear" onClick={onClearAll}>
+            <button type="button" className="ItemSlotPicker__clear" data-testid="applied-clear" onClick={refocus(onClearAll)}>
               Clear all
-            </span>
+            </button>
           )}
         </div>
       )}

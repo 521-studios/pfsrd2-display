@@ -2,7 +2,7 @@ import React from 'react'
 import Modifiers from './Modifiers'
 
 const InlineAbility = (props) => {
-  const { ability, children, onToggleUMA } = props
+  const { ability, children, onToggleUMA, umaExpanded = false } = props
 
   if (!ability) { return null }
 
@@ -13,11 +13,12 @@ const InlineAbility = (props) => {
     return ''
   }
 
-  const hasUMA = !!ability.universal_monster_ability
+  // No handler (e.g. Languages) → plain text, not a button that does nothing.
+  const hasUMA = !!ability.universal_monster_ability && !!onToggleUMA
   const nameEl = hasUMA ? (
-    <span className="Monster__uma-toggle" onClick={() => onToggleUMA && onToggleUMA(ability.name)}>
+    <button type="button" className="Monster__uma-toggle" aria-expanded={umaExpanded} onClick={() => onToggleUMA(ability.name)}>
       {ability.name}
-    </span>
+    </button>
   ) : ability.name
 
   return (
