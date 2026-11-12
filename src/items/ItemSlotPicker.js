@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useRef, useState } from 'react'
 import PropTypes from 'prop-types'
 import Markdown from '../shared/Markdown'
 import { formatGp } from '../shared/pf2e'
@@ -121,6 +121,9 @@ function GradeStepRow({ id, name, aside, options, defaultKey, onApply, loading }
   const [open, setOpen] = useState(false)
   const [key, setKey] = useState(graded ? defaultKey : undefined)
   const chosen = options.find((o) => o.key === key)
+  // Apply unmounts the radiogroup it sits in, so hand focus back to the toggle
+  // rather than dropping it to <body>.
+  const toggleRef = useRef(null)
 
   return (
     <li className="ItemSlotPicker__item">
@@ -132,6 +135,8 @@ function GradeStepRow({ id, name, aside, options, defaultKey, onApply, loading }
             type="button"
             className="ItemSlotPicker__add"
             data-testid="grade-open"
+            ref={toggleRef}
+            aria-expanded={open}
             disabled={loading}
             onClick={() => setOpen((v) => !v)}
           >
@@ -163,7 +168,11 @@ function GradeStepRow({ id, name, aside, options, defaultKey, onApply, loading }
             className="ItemSlotPicker__apply-grade"
             data-testid="apply-grade"
             disabled={loading || !chosen}
-            onClick={() => { onApply(chosen); setOpen(false) }}
+            onClick={() => {
+              onApply(chosen)
+              setOpen(false)
+              if (toggleRef.current) toggleRef.current.focus()
+            }}
           >
             Apply
           </button>
@@ -318,7 +327,8 @@ ItemSlotPicker.propTypes = {
   // stack entries carry at least { applied } — the label from the apply response.
   stack: PropTypes.arrayOf(PropTypes.shape({ applied: PropTypes.string })),
   // (candidate, { grade }) => void. A graded material also passes gradePrice: its chosen
-  // /eligible grade_prices row ({ grade, name, level, price_cp, cp_per_bulk?, form? }).
+  // /eligible grade_prices row, unchanged (grade, name, level, price_cp, and per-Bulk
+  // cp_per_bulk/per_bulk_text or a shield form).
   onApply: PropTypes.func.isRequired,
   onApplySpell: PropTypes.func, // (spell) => void
   onRemoveLast: PropTypes.func,

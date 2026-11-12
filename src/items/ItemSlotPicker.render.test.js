@@ -96,6 +96,18 @@ describe('ItemSlotPicker', () => {
     assert.match(html, /Cold Iron<\/span><span[^>]*>precious<\/span><button[^>]*data-testid="apply-candidate"[^>]*>Add<\/button>/)
   })
 
+  it('a material with a single grade_prices row applies directly (no grade step)', () => {
+    const one = { game_id: 'buck', name: 'Duskwood Buckler', grade_prices: [{ grade: 'standard', name: 'Duskwood Buckler (Standard-Grade)', level: 8, price_cp: 40000, form: 'buckler' }] }
+    const html = renderToStaticMarkup(React.createElement(ItemSlotPicker, { eligibility: { item: eligibility.item, materials: [one] }, onApply: () => {} }))
+    assert.match(html, /Duskwood Buckler<\/span><button[^>]*data-testid="apply-candidate"[^>]*>Add<\/button>/)
+    assert.doesNotMatch(html, /grade-open/)
+  })
+
+  it('the Choose grade toggle reports its collapsed state', () => {
+    const html = renderToStaticMarkup(React.createElement(ItemSlotPicker, { eligibility, onApply: () => {} }))
+    assert.match(html, /aria-expanded="false"[^>]*>Choose grade</)
+  })
+
   it('materialGradeOptions sorts by level and labels grade, shield form and price (76bn)', () => {
     const opts = materialGradeOptions({
       grade_prices: [
@@ -113,6 +125,18 @@ describe('ItemSlotPicker', () => {
     })
     assert.deepStrictEqual([buckler.label, buckler.price], ['Standard tower shield · Item 8', '400 gp'])
     assert.deepStrictEqual(materialGradeOptions({ name: 'Cold Iron' }), []) // no grade_prices (older API)
+    // Fallbacks: no grade → the row name; no level → no "· Item" suffix (sorted first);
+    // price is whatever of price_cp / per_bulk_text is present.
+    const odd = materialGradeOptions({
+      grade_prices: [
+        { name: 'Odd Thing', level: 3, per_bulk_text: '+1 gp per Bulk' },
+        { grade: 'standard', name: 'Levelless', price_cp: 100 },
+      ],
+    })
+    assert.deepStrictEqual(odd.map((o) => [o.label, o.price]), [
+      ['Standard', '1 gp'],
+      ['Odd Thing · Item 3', '+1 gp per Bulk'],
+    ])
   })
 
   it('renders nothing without eligibility', () => {
