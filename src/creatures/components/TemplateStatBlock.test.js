@@ -1,27 +1,8 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert'
-
-// partitionTemplateRules is the render-model builder for TemplateStatBlock.
-// The component file is JSX, which node:test cannot parse, so the logic
-// lives in an exported pure function and the tests replicate it here from
-// the same contract. Keep in sync with TemplateStatBlock.js.
-const partitionTemplateRules = (mt) => {
-  const changes = (mt && mt.changes) || []
-  const textChanges = []
-  const abilityChanges = []
-  for (const c of changes) {
-    if (c.abilities && c.abilities.length > 0) {
-      abilityChanges.push(c)
-    } else if (c.text) {
-      textChanges.push(c.text)
-    }
-  }
-  return {
-    combinedText: textChanges.join('\n'),
-    abilityChanges,
-    poolAbilities: (mt && mt.abilities) || [],
-  }
-}
+import React from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
+import TemplateStatBlock, { partitionTemplateRules, TemplateChanges } from './TemplateStatBlock.js'
 
 describe('partitionTemplateRules', () => {
   it('surfaces template-level pool abilities (Catfolk regression)', () => {
@@ -64,5 +45,44 @@ describe('partitionTemplateRules', () => {
       abilityChanges: [],
       poolAbilities: [],
     })
+  })
+})
+
+// Render-level: the real components, so a regression that computes the rules
+// right but drops them from the DOM (the Catfolk bug) fails here.
+const renderRules = (mt) => renderToStaticMarkup(<TemplateChanges {...partitionTemplateRules(mt)} />)
+
+describe('TemplateChanges (render)', () => {
+  it('renders the template-level ability pool under the text changes (Catfolk)', () => {
+    const html = renderRules({
+      changes: [{ text: '- Add the following abilities.' }],
+      abilities: [{ name: 'Low-Light Vision' }],
+    })
+    assert.match(html, /Add the following abilities/)
+    assert.match(html, /Low-Light Vision/)
+  })
+
+  it('renders change-embedded abilities under their own change', () => {
+    const html = renderRules({
+      changes: [{ text: 'All host creatures gain the following abilities.', abilities: [{ name: 'Cold Stasis' }] }],
+    })
+    assert.match(html, /Monster__template-change.*All host creatures gain the following abilities.*Cold Stasis/s)
+  })
+
+  it('renders nothing when there are no rules', () => {
+    assert.strictEqual(renderRules(null), '')
+  })
+})
+
+describe('TemplateStatBlock (render)', () => {
+  it('renders a collapsed "<name> Template" disclosure for templates and families', () => {
+    for (const key of ['monster_template', 'monster_family']) {
+      const html = renderToStaticMarkup(<TemplateStatBlock template={{ name: 'Cryptid', [key]: { changes: [] } }} />)
+      assert.match(html, /aria-expanded="false"[^>]*>.*Cryptid Template<\/button>/)
+    }
+  })
+
+  it('renders nothing without a template', () => {
+    assert.strictEqual(renderToStaticMarkup(<TemplateStatBlock template={null} />), '')
   })
 })
