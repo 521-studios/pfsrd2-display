@@ -58,8 +58,7 @@ describe('TemplateChanges (render)', () => {
       changes: [{ text: '- Add the following abilities.' }],
       abilities: [{ name: 'Low-Light Vision' }],
     })
-    assert.match(html, /Add the following abilities/)
-    assert.match(html, /Low-Light Vision/)
+    assert.match(html, /Add the following abilities.*Monster__template-abilities.*Low-Light Vision/s)
   })
 
   it('renders change-embedded abilities under their own change', () => {
@@ -79,6 +78,7 @@ describe('TemplateStatBlock (render)', () => {
     for (const key of ['monster_template', 'monster_family']) {
       const html = renderToStaticMarkup(<TemplateStatBlock template={{ name: 'Cryptid', [key]: { changes: [] } }} />)
       assert.match(html, /aria-expanded="false"[^>]*>.*Cryptid Template<\/button>/)
+      assert.doesNotMatch(html, /Monster__template-body/) // body unmounted while collapsed
     }
   })
 
