@@ -21,7 +21,7 @@ export async function resolve (specifier, context, nextResolve) {
 }
 
 export async function load (url, context, nextLoad) {
-  if (url.startsWith('file:') && url.includes('/src/') && (url.endsWith('.js') || url.endsWith('.jsx'))) {
+  if (url.startsWith('file:') && url.includes('/src/') && !url.includes('/node_modules/') && (url.endsWith('.js') || url.endsWith('.jsx'))) {
     const loaded = await nextLoad(url, { ...context, format: 'module' })
     const source = loaded.source.toString()
     const { code } = await transformAsync(source, {
