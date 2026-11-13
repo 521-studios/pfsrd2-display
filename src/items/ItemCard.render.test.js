@@ -60,6 +60,21 @@ describe('ItemCard unmasked variant (render)', () => {
     assert.match(html, /casts fireball/)
   })
 
+  it('reads top-level fields for a hand-built item with no stat_block wrapper', () => {
+    const html = renderToStaticMarkup(<ItemCard data={{ name: 'Custom Blade', level: 5, price: { text: '50 gp' } }} />)
+    assert.match(html, /Custom Blade/)
+    assert.match(html, /Item 5/)
+    assert.match(html, /50 gp/)
+  })
+
+  it('omits price, bulk, traits and text lines when they are absent', () => {
+    const html = renderToStaticMarkup(<ItemCard data={{ name: 'Mystery Object', stat_block: { level: 1 } }} />)
+    assert.match(html, /Mystery Object/)
+    assert.doesNotMatch(html, /Price/)
+    assert.doesNotMatch(html, /Bulk/)
+    assert.doesNotMatch(html, /trait/i)
+  })
+
   it('renders a level-0 item but suppresses the level line for null/undefined', () => {
     assert.match(renderToStaticMarkup(<ItemCard data={{ name: 'X', stat_block: { level: 0 } }} />), /Item 0/)
     assert.doesNotMatch(renderToStaticMarkup(<ItemCard data={{ name: 'X', stat_block: {} }} />), /Item /)

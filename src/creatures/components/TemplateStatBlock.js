@@ -98,7 +98,9 @@ const TemplateSections = ({ sections }) => {
   )
 }
 
-const TemplateChanges = ({ combinedText, abilityChanges, poolAbilities }) => {
+// Exported for render tests: TemplateStatBlock's body sits in a collapsed
+// Collapsible, which a static render can't open.
+export const TemplateChanges = ({ combinedText, abilityChanges, poolAbilities }) => {
   const hasPool = poolAbilities && poolAbilities.length > 0
   if (!combinedText && abilityChanges.length === 0 && !hasPool) return null
 
