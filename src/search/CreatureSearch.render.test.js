@@ -5,9 +5,9 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import CreatureSearch from './CreatureSearch.js'
 
 // Render-level tests only reach the initial (pre-effect) markup — renderToStaticMarkup
-// doesn't run effects, so the debounced fetch, stale-response guard, and result
-// rendering are covered by the Playwright spec (e2e/creature-search.spec.js) against
-// the real harness. Here we pin the static contract: the input and its hooks.
+// doesn't run effects. The debounced fetch, stale-response guard, and result
+// rendering are covered in CreatureSearch.interactive.test.js (jsdom) and the
+// Playwright spec. Here we pin the static contract: the input and its hooks.
 describe('CreatureSearch (render)', () => {
   const noop = () => {}
 
