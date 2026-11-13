@@ -8,6 +8,8 @@ import React, { act } from 'react'
 const dom = new JSDOM('<!doctype html><html><body></body></html>')
 globalThis.window = dom.window
 globalThis.document = dom.window.document
+// Node 21+ ships a global navigator; Node 20 (CI) doesn't, and react-dom reads it.
+if (typeof navigator === 'undefined') globalThis.navigator = dom.window.navigator
 globalThis.IS_REACT_ACT_ENVIRONMENT = true
 const { createRoot } = await import('react-dom/client')
 const { default: CreatureSearch } = await import('./CreatureSearch.js')
@@ -25,6 +27,7 @@ let root, container
 after(() => {
   delete globalThis.window
   delete globalThis.document
+  if (globalThis.navigator === dom.window.navigator) delete globalThis.navigator
   dom.window.close()
 })
 afterEach(() => {
@@ -40,17 +43,17 @@ function deferredSearch() {
   return { search, calls }
 }
 
-function mount(search) {
+function mount(search, props = {}) {
   container = document.createElement('div')
   document.body.appendChild(container)
   root = createRoot(container)
-  act(() => root.render(<CreatureSearch search={search} onSelect={() => {}} debounceMs={DEBOUNCE} />))
+  act(() => root.render(<CreatureSearch search={search} onSelect={() => {}} debounceMs={DEBOUNCE} {...props} />))
 }
 
 // Controlled input: set the value through the native setter so React's
 // onChange sees the change, then fire the input event it listens for.
-function type(text) {
-  const input = container.querySelector('[data-testid="creature-search"]')
+function type(text, testId = 'creature-search') {
+  const input = container.querySelector(`[data-testid="${testId}"]`)
   const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set
   act(() => {
     setter.call(input, text)
@@ -91,15 +94,17 @@ describe('CreatureSearch (interactive)', () => {
     assert.deepStrictEqual(names(), ['Goblin Warrior'])
   })
 
-  it('a stale rejection neither clears newer results nor flips loading', async () => {
+  it('a stale settle while the newer search is pending keeps loading, then the newer one commits', async () => {
     const { search, calls } = deferredSearch()
     mount(search)
     type('gob')
     await afterDebounce()
     type('gobl')
     await afterDebounce()
-    await act(async () => calls[1].resolve([row('Goblin Warrior')]))
+    // Stale call settles while the newer one is still pending: loading must hold.
     await act(async () => calls[0].reject(new Error('slow failure')))
+    assert.strictEqual(status(), 'Searching…')
+    await act(async () => calls[1].resolve([row('Goblin Warrior')]))
     assert.deepStrictEqual(names(), ['Goblin Warrior'])
     assert.strictEqual(status(), null)
   })
@@ -125,5 +130,30 @@ describe('CreatureSearch (interactive)', () => {
     await act(async () => calls[0].reject(new Error('boom')))
     assert.deepStrictEqual(names(), [])
     assert.strictEqual(status(), 'No results')
+  })
+
+  it('shows "No results" for an empty result set', async () => {
+    const { search, calls } = deferredSearch()
+    mount(search)
+    type('zzz')
+    await afterDebounce()
+    await act(async () => calls[0].resolve([]))
+    assert.strictEqual(status(), 'No results')
+  })
+
+  it('a filter alone runs the search with an empty query, and filter changes re-run it', async () => {
+    const { search, calls } = deferredSearch()
+    mount(search, { levelFilter: true })
+    type('3', 'CreatureSearch-level-min')
+    await afterDebounce()
+    assert.strictEqual(calls.length, 1)
+    assert.strictEqual(calls[0].query, '')
+    assert.strictEqual(calls[0].filters.levelMin, '3')
+    type('5', 'CreatureSearch-level-max')
+    await afterDebounce()
+    assert.strictEqual(calls.length, 2)
+    assert.deepStrictEqual([calls[1].filters.levelMin, calls[1].filters.levelMax], ['3', '5'])
+    await act(async () => calls[1].resolve([row('Ogre')]))
+    assert.deepStrictEqual(names(), ['Ogre'])
   })
 })
